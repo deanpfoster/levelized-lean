@@ -5,119 +5,144 @@ namespace Cpp
 /-! # Proofs for C++ algorithm formalizations (N4950 §27.7-27.9)
 
   Proven properties of min, max, clamp, isSorted, minElement, maxElement.
-  These use `compare` and the `OrdLawful` / `OrdEqRefl` typeclasses
+  These use `StrongOrd.strongCmp` and the `StrongOrd` / `StrongOrdEq` typeclasses
   where symmetry, transitivity, or equality reflection is needed.
 -/
 
-variable {T : Type} [Ord T]
+variable {T : Type} [StrongOrd T]
 
 /-! ## Reflexivity and transitivity of cmpLe -/
 
-theorem cmpLe_refl_proof [OrdLawful T] (a : T) : cmpLe a a := by
-  unfold cmpLe; rw [OrdLawful.compare_refl]; decide
+theorem cmpLe_refl_proof (a : T) : cmpLe a a := by
+  unfold cmpLe; rw [StrongOrd.cmp_refl]; decide
 
-theorem cmpLe_trans_proof [OrdLawful T] (a b c : T) :
-    cmpLe a b → cmpLe b c → cmpLe a c :=
-  OrdLawful.compare_le_trans a b c
+theorem cmpLe_trans_proof (a b c : T) :
+    cmpLe a b → cmpLe b c → cmpLe a c := by
+  unfold cmpLe
+  intro hab hbc
+  intro hac
+  -- strongCmp a c = .gt, so strongCmp c a = .lt
+  have hca := StrongOrd.flip_gt_means_lt a c hac
+  -- Case split on strongCmp a b
+  cases hab' : StrongOrd.strongCmp a b with
+  | lt =>
+    cases hbc' : StrongOrd.strongCmp b c with
+    | lt =>
+      have := StrongOrd.cmp_lt_trans a b c hab' hbc'
+      rw [this] at hac; exact absurd hac (by decide)
+    | eq =>
+      have := StrongOrd.cmp_lt_eq_trans a b c hab' hbc'
+      rw [this] at hac; exact absurd hac (by decide)
+    | gt => exact hbc hbc'
+  | eq =>
+    cases hbc' : StrongOrd.strongCmp b c with
+    | lt =>
+      have := StrongOrd.cmp_eq_lt_trans a b c hab' hbc'
+      rw [this] at hac; exact absurd hac (by decide)
+    | eq =>
+      have := StrongOrd.cmp_eq_trans a b c hab' hbc'
+      rw [this] at hac; exact absurd hac (by decide)
+    | gt => exact hbc hbc'
+  | gt => exact hab hab'
 
 /-! ## cppMin properties -/
 
 /-- `cppMin a b` is either `a` or `b`. -/
 theorem cppMin_cases_proof (a b : T) : cppMin a b = a ∨ cppMin a b = b := by
   unfold cppMin
-  cases compare a b with
+  cases StrongOrd.strongCmp a b with
   | lt => left; rfl
   | eq => left; rfl
   | gt => right; rfl
 
 /-- `cppMin a b ≤ a` (in the `cmpLe` sense). -/
-theorem cppMin_le_left_proof [OrdLawful T] (a b : T) :
+theorem cppMin_le_left_proof (a b : T) :
     cmpLe (cppMin a b) a := by
   unfold cppMin cmpLe
-  cases hab : compare a b with
-  | lt => rw [OrdLawful.compare_refl]; decide
-  | eq => rw [OrdLawful.compare_refl]; decide
-  | gt => rw [OrdLawful.compare_gt_iff_lt a b hab]; decide
+  cases hab : StrongOrd.strongCmp a b with
+  | lt => rw [StrongOrd.cmp_refl]; decide
+  | eq => rw [StrongOrd.cmp_refl]; decide
+  | gt => rw [StrongOrd.flip_gt_means_lt a b hab]; decide
 
 /-- `cppMin a b ≤ b` (in the `cmpLe` sense). -/
-theorem cppMin_le_right_proof [OrdLawful T] (a b : T) :
+theorem cppMin_le_right_proof (a b : T) :
     cmpLe (cppMin a b) b := by
   unfold cppMin cmpLe
-  cases hab : compare a b with
+  cases hab : StrongOrd.strongCmp a b with
   | lt => rw [hab]; decide
   | eq => rw [hab]; decide
-  | gt => rw [OrdLawful.compare_refl]; decide
+  | gt => rw [StrongOrd.cmp_refl]; decide
 
-/-- `cppMin a a = a` for any `a`, given a lawful ordering. -/
-theorem cppMin_self_proof [OrdLawful T] (a : T) : cppMin a a = a := by
-  unfold cppMin; rw [OrdLawful.compare_refl]
+/-- `cppMin a a = a` for any `a`, given a StrongOrd. -/
+theorem cppMin_self_proof (a : T) : cppMin a a = a := by
+  unfold cppMin; rw [StrongOrd.cmp_refl]
 
 /-- `cppMin` is commutative when the ordering is lawful and equality-reflecting. -/
-theorem cppMin_comm_proof [OrdLawful T] [OrdEqRefl T] (a b : T) :
+theorem cppMin_comm_proof [StrongOrdEq T] (a b : T) :
     cppMin a b = cppMin b a := by
   unfold cppMin
-  cases hab : compare a b with
-  | lt => rw [OrdLawful.compare_lt_iff_gt a b hab]
+  cases hab : StrongOrd.strongCmp a b with
+  | lt => rw [StrongOrd.flip_lt_means_gt a b hab]
   | eq =>
-    have heq := OrdEqRefl.compare_eq_imp_eq a b hab
-    subst heq; rw [OrdLawful.compare_refl]
-  | gt => rw [OrdLawful.compare_gt_iff_lt a b hab]
+    have heq := StrongOrdEq.cmp_eq_imp_eq a b hab
+    subst heq; rw [StrongOrd.cmp_refl]
+  | gt => rw [StrongOrd.flip_gt_means_lt a b hab]
 
 /-! ## cppMax properties -/
 
 /-- `cppMax a b` is either `a` or `b`. -/
 theorem cppMax_cases_proof (a b : T) : cppMax a b = a ∨ cppMax a b = b := by
   unfold cppMax
-  cases compare a b with
+  cases StrongOrd.strongCmp a b with
   | lt => right; rfl
   | eq => left; rfl
   | gt => left; rfl
 
 /-- `a ≤ cppMax a b` (in the `cmpLe` sense). -/
-theorem cppMax_ge_left_proof [OrdLawful T] (a b : T) :
+theorem cppMax_ge_left_proof (a b : T) :
     cmpLe a (cppMax a b) := by
   unfold cppMax cmpLe
-  cases hab : compare a b with
+  cases hab : StrongOrd.strongCmp a b with
   | lt =>
-    -- max = b, need compare a b ≠ .gt
+    -- max = b, need strongCmp a b ≠ .gt
     rw [hab]; decide
   | eq =>
-    -- max = a, need compare a a ≠ .gt
-    rw [OrdLawful.compare_refl]; decide
+    -- max = a, need strongCmp a a ≠ .gt
+    rw [StrongOrd.cmp_refl]; decide
   | gt =>
-    -- max = a, need compare a a ≠ .gt
-    rw [OrdLawful.compare_refl]; decide
+    -- max = a, need strongCmp a a ≠ .gt
+    rw [StrongOrd.cmp_refl]; decide
 
 /-- `b ≤ cppMax a b` (in the `cmpLe` sense). -/
-theorem cppMax_ge_right_proof [OrdLawful T] (a b : T) :
+theorem cppMax_ge_right_proof (a b : T) :
     cmpLe b (cppMax a b) := by
   unfold cppMax cmpLe
-  cases hab : compare a b with
+  cases hab : StrongOrd.strongCmp a b with
   | lt =>
     -- max = b
-    rw [OrdLawful.compare_refl]; decide
+    rw [StrongOrd.cmp_refl]; decide
   | eq =>
-    -- max = a, need compare b a ≠ .gt
-    have := OrdLawful.compare_eq_symm a b hab
+    -- max = a, need strongCmp b a ≠ .gt
+    have := StrongOrd.flip_eq_means_eq a b hab
     rw [this]; decide
   | gt =>
-    -- max = a, need compare b a ≠ .gt
-    rw [OrdLawful.compare_gt_iff_lt a b hab]; decide
+    -- max = a, need strongCmp b a ≠ .gt
+    rw [StrongOrd.flip_gt_means_lt a b hab]; decide
 
-/-- `cppMax a a = a` for any `a`, given a lawful ordering. -/
-theorem cppMax_self_proof [OrdLawful T] (a : T) : cppMax a a = a := by
-  unfold cppMax; rw [OrdLawful.compare_refl]
+/-- `cppMax a a = a` for any `a`, given a StrongOrd. -/
+theorem cppMax_self_proof (a : T) : cppMax a a = a := by
+  unfold cppMax; rw [StrongOrd.cmp_refl]
 
 /-- `cppMax` is commutative when the ordering is lawful and equality-reflecting. -/
-theorem cppMax_comm_proof [OrdLawful T] [OrdEqRefl T] (a b : T) :
+theorem cppMax_comm_proof [StrongOrdEq T] (a b : T) :
     cppMax a b = cppMax b a := by
   unfold cppMax
-  cases hab : compare a b with
-  | lt => rw [OrdLawful.compare_lt_iff_gt a b hab]
+  cases hab : StrongOrd.strongCmp a b with
+  | lt => rw [StrongOrd.flip_lt_means_gt a b hab]
   | eq =>
-    have heq := OrdEqRefl.compare_eq_imp_eq a b hab
-    subst heq; rw [OrdLawful.compare_refl]
-  | gt => rw [OrdLawful.compare_gt_iff_lt a b hab]
+    have heq := StrongOrdEq.cmp_eq_imp_eq a b hab
+    subst heq; rw [StrongOrd.cmp_refl]
+  | gt => rw [StrongOrd.flip_gt_means_lt a b hab]
 
 /-! ## cppClamp properties -/
 
@@ -125,81 +150,81 @@ theorem cppMax_comm_proof [OrdLawful T] [OrdEqRefl T] (a b : T) :
 theorem cppClamp_trichotomy_proof (v lo hi : T) :
     cppClamp v lo hi = lo ∨ cppClamp v lo hi = hi ∨ cppClamp v lo hi = v := by
   unfold cppClamp
-  cases compare v lo with
+  cases StrongOrd.strongCmp v lo with
   | lt => left; rfl
   | eq =>
-    cases compare v hi with
+    cases StrongOrd.strongCmp v hi with
     | lt => right; right; rfl
     | eq => right; right; rfl
     | gt => right; left; rfl
   | gt =>
-    cases compare v hi with
+    cases StrongOrd.strongCmp v hi with
     | lt => right; right; rfl
     | eq => right; right; rfl
     | gt => right; left; rfl
 
 /-- `cppClamp` returns a value in `[lo, hi]` (given `lo ≤ hi`). -/
-theorem cppClamp_in_range_proof [OrdLawful T] (v lo hi : T)
+theorem cppClamp_in_range_proof (v lo hi : T)
     (hlohi : cmpLe lo hi) :
     cmpLe lo (cppClamp v lo hi) ∧ cmpLe (cppClamp v lo hi) hi := by
   unfold cppClamp
-  cases hvlo : compare v lo with
+  cases hvlo : StrongOrd.strongCmp v lo with
   | lt =>
     -- result is lo
     exact ⟨cmpLe_refl_proof lo, hlohi⟩
   | eq =>
     -- compare v lo ≠ .lt, fallthrough to inner match
-    cases hvhi : compare v hi with
+    cases hvhi : StrongOrd.strongCmp v hi with
     | lt =>
       -- result is v
       constructor
-      · unfold cmpLe; rw [OrdLawful.compare_eq_symm v lo hvlo]; decide
+      · unfold cmpLe; rw [StrongOrd.flip_eq_means_eq v lo hvlo]; decide
       · unfold cmpLe; rw [hvhi]; decide
     | eq =>
       -- result is v
       constructor
-      · unfold cmpLe; rw [OrdLawful.compare_eq_symm v lo hvlo]; decide
+      · unfold cmpLe; rw [StrongOrd.flip_eq_means_eq v lo hvlo]; decide
       · unfold cmpLe; rw [hvhi]; decide
     | gt =>
       -- result is hi
       exact ⟨hlohi, cmpLe_refl_proof hi⟩
   | gt =>
-    cases hvhi : compare v hi with
+    cases hvhi : StrongOrd.strongCmp v hi with
     | lt =>
       -- result is v
       constructor
-      · unfold cmpLe; rw [OrdLawful.compare_gt_iff_lt v lo hvlo]; decide
+      · unfold cmpLe; rw [StrongOrd.flip_gt_means_lt v lo hvlo]; decide
       · unfold cmpLe; rw [hvhi]; decide
     | eq =>
       -- result is v
       constructor
-      · unfold cmpLe; rw [OrdLawful.compare_gt_iff_lt v lo hvlo]; decide
+      · unfold cmpLe; rw [StrongOrd.flip_gt_means_lt v lo hvlo]; decide
       · unfold cmpLe; rw [hvhi]; decide
     | gt =>
       -- result is hi
       exact ⟨hlohi, cmpLe_refl_proof hi⟩
 
 /-- `cppClamp lo lo hi = lo` (assuming `lo ≤ hi`). -/
-theorem cppClamp_lo_proof [OrdLawful T] (lo hi : T)
+theorem cppClamp_lo_proof (lo hi : T)
     (h : cmpLe lo hi) : cppClamp lo lo hi = lo := by
   unfold cppClamp
-  cases hll : compare lo lo with
+  cases hll : StrongOrd.strongCmp lo lo with
   | lt => rfl
   | eq =>
-    cases hlh : compare lo hi with
+    cases hlh : StrongOrd.strongCmp lo hi with
     | lt => rfl
     | eq => rfl
     | gt => exact absurd hlh h
-  | gt => have := OrdLawful.compare_refl lo; rw [this] at hll; exact absurd hll (by decide)
+  | gt => have := StrongOrd.cmp_refl lo; rw [this] at hll; exact absurd hll (by decide)
 
 /-- `cppClamp hi lo hi = hi` (assuming `lo ≤ hi`). -/
-theorem cppClamp_hi_proof [OrdLawful T] (lo hi : T)
+theorem cppClamp_hi_proof (lo hi : T)
     (h : cmpLe lo hi) : cppClamp hi lo hi = hi := by
   unfold cppClamp
-  cases hhl : compare hi lo with
-  | lt => have := OrdLawful.compare_lt_iff_gt hi lo hhl; exact absurd this h
-  | eq => rw [OrdLawful.compare_refl]
-  | gt => rw [OrdLawful.compare_refl]
+  cases hhl : StrongOrd.strongCmp hi lo with
+  | lt => have := StrongOrd.flip_lt_means_gt hi lo hhl; exact absurd this h
+  | eq => rw [StrongOrd.cmp_refl]
+  | gt => rw [StrongOrd.cmp_refl]
 
 /-! ## isSorted properties -/
 
@@ -209,9 +234,9 @@ theorem isSorted_nil_proof : isSorted ([] : List T) = true := rfl
 /-- A singleton list is sorted. -/
 theorem isSorted_singleton_proof (a : T) : isSorted [a] = true := rfl
 
-/-- If `a :: b :: l` is sorted, then `compare a b ≠ .gt`. -/
+/-- If `a :: b :: l` is sorted, then `strongCmp a b ≠ .gt`. -/
 theorem isSorted_cons_proof (a b : T) (l : List T) :
-    isSorted (a :: b :: l) = true → compare a b ≠ Ordering.gt := by
+    isSorted (a :: b :: l) = true → StrongOrd.strongCmp a b ≠ Ordering.gt := by
   intro h hgt
   simp [isSorted, hgt] at h
 
@@ -220,7 +245,7 @@ theorem isSorted_tail_proof (a b : T) (l : List T) :
     isSorted (a :: b :: l) = true → isSorted (b :: l) = true := by
   intro h
   simp [isSorted] at h
-  cases hab : compare a b with
+  cases hab : StrongOrd.strongCmp a b with
   | lt => simp [hab] at h; exact h
   | eq => simp [hab] at h; exact h
   | gt => simp [hab] at h
@@ -240,7 +265,7 @@ theorem foldl_cppMin_mem_proof (x : T) (xs : List T) :
     | inl heq =>
       rw [heq]
       have hcases : cppMin x y = x ∨ cppMin x y = y := by
-        unfold cppMin; cases compare x y <;> simp
+        unfold cppMin; cases StrongOrd.strongCmp x y <;> simp
       cases hcases with
       | inl hl => left; exact hl
       | inr hr => right; left; exact hr
@@ -259,7 +284,7 @@ theorem minElement_mem_proof [Inhabited T] (l : List T) (hl : l ≠ []) :
     | inr hmem => exact List.Mem.tail x hmem
 
 /-- Helper: `foldl cppMin` result is ≤ the initial accumulator. -/
-theorem foldl_cppMin_le_init_proof [OrdLawful T] (init : T) (xs : List T) :
+theorem foldl_cppMin_le_init_proof (init : T) (xs : List T) :
     cmpLe (List.foldl (fun acc y => cppMin acc y) init xs) init := by
   induction xs generalizing init with
   | nil => exact cmpLe_refl_proof init
@@ -268,7 +293,7 @@ theorem foldl_cppMin_le_init_proof [OrdLawful T] (init : T) (xs : List T) :
     exact cmpLe_trans_proof _ _ _ (ih (cppMin init y)) (cppMin_le_left_proof init y)
 
 /-- Helper: `foldl cppMin` result is ≤ every element in the list. -/
-theorem foldl_cppMin_le_all_proof [OrdLawful T] (init : T) (xs : List T) :
+theorem foldl_cppMin_le_all_proof (init : T) (xs : List T) :
     ∀ (y : T), y ∈ xs → cmpLe (List.foldl (fun acc y => cppMin acc y) init xs) y := by
   induction xs generalizing init with
   | nil => intro y hy; exact absurd hy (List.not_mem_nil y)
@@ -283,8 +308,8 @@ theorem foldl_cppMin_le_all_proof [OrdLawful T] (init : T) (xs : List T) :
     | tail _ hmem =>
       exact ih (cppMin init z) y hmem
 
-/-- `minElement l` is ≤ every element of `l` (given `OrdLawful`). -/
-theorem minElement_le_proof [Inhabited T] [OrdLawful T] (l : List T) (hl : l ≠ []) :
+/-- `minElement l` is ≤ every element of `l` (given `StrongOrd`). -/
+theorem minElement_le_proof [Inhabited T] (l : List T) (hl : l ≠ []) :
     ∀ (x : T), x ∈ l → cmpLe (minElement l) x := by
   match l, hl with
   | z :: zs, _ =>
@@ -294,52 +319,20 @@ theorem minElement_le_proof [Inhabited T] [OrdLawful T] (l : List T) (hl : l ≠
     | head => exact foldl_cppMin_le_init_proof z zs
     | tail _ hmem => exact foldl_cppMin_le_all_proof z zs x hmem
 
-/-! ## Nat and Int instances of OrdLawful -/
+/-! ## Nat instance of StrongOrdEq -/
 
-private theorem nat_compare_lt {a b : Nat} (h : a < b) :
-    @compare Nat instOrdNat a b = .lt := by
-  show compareOfLessAndEq a b = .lt
-  unfold compareOfLessAndEq; rw [if_pos h]
-
-private theorem nat_compare_eq {a b : Nat} (h : a = b) :
-    @compare Nat instOrdNat a b = .eq := by
-  show compareOfLessAndEq a b = .eq
-  unfold compareOfLessAndEq; rw [if_neg (by omega), if_pos h]
-
-private theorem nat_compare_gt {a b : Nat} (h1 : ¬ a < b) (h2 : a ≠ b) :
-    @compare Nat instOrdNat a b = .gt := by
-  show compareOfLessAndEq a b = .gt
-  unfold compareOfLessAndEq; rw [if_neg h1, if_neg h2]
-
-instance : OrdLawful Nat where
-  compare_refl := by intro a; exact nat_compare_eq rfl
-  compare_swap := by
-    intro a b
-    by_cases hab : a < b
-    · rw [nat_compare_lt hab, nat_compare_gt (by omega) (by omega)]; rfl
-    · by_cases habe : a = b
-      · rw [nat_compare_eq habe, nat_compare_eq (by omega)]; rfl
-      · rw [nat_compare_gt hab habe, nat_compare_lt (by omega)]; rfl
-  compare_le_trans := by
-    intro a b c hab hbc
-    by_cases h1 : a < b
-    · by_cases h2 : b < c
-      · rw [nat_compare_lt (by omega)]; decide
-      · by_cases h2e : b = c
-        · rw [nat_compare_lt (by omega)]; decide
-        · rw [nat_compare_gt h2 h2e] at hbc; exact absurd rfl hbc
-    · by_cases h1e : a = b
-      · subst h1e; exact hbc
-      · rw [nat_compare_gt h1 h1e] at hab; exact absurd rfl hab
-
-instance : OrdEqRefl Nat where
-  compare_eq_imp_eq := by
+instance : StrongOrdEq Nat where
+  cmp_eq_imp_eq := by
     intro a b h
-    -- h : compare a b = .eq, which is compareOfLessAndEq a b = .eq
+    -- h : StrongOrd.strongCmp a b = .eq, which is natCmp a b = .eq
+    show a = b
+    have h' : natCmp a b = Ordering.eq := h
+    unfold natCmp at h'
     by_cases hab : a < b
-    · rw [nat_compare_lt hab] at h; exact absurd h (by decide)
-    · by_cases habe : a = b
+    · simp [hab] at h'
+    · simp [hab] at h'
+      by_cases habe : a = b
       · exact habe
-      · rw [nat_compare_gt hab habe] at h; exact absurd h (by decide)
+      · simp [habe] at h'
 
 end Cpp

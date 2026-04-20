@@ -118,7 +118,7 @@ Key theorems: `find_insert_same`, `find_insert_other`, `erase_find`, `keys_sorte
 
 ### Algorithm (import DeanLean.Cpp.Code.Algorithm)
 
-Uses Lean's `Ord` with `OrdLawful` typeclass (should be migrated to `StrongOrd`).
+Uses `StrongOrd` typeclass with `strongCmp` for three-way comparison.
 Functions: `cppMin`, `cppMax`, `cppClamp`, `minElement`, `maxElement`, `isSorted`
 
 ## Macro Reference

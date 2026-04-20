@@ -19,6 +19,18 @@ namespace Cpp
 
 variable {K : Type} {V : Type} [StrongOrd K]
 
+/-! ## Vocabulary — definitions that appear in theorem types
+
+  SortedKeys [StrongOrd K] : List K → Prop
+    Each adjacent pair has strongCmp k₁ k₂ = .lt (strictly ascending)
+
+  Map K V [StrongOrd K] : structure with entries : List (K × V)
+    and proof that entries satisfies SortedPairs
+
+  CppSet K [StrongOrd K] : structure with elems : List K
+    and proof that elems satisfies SortedKeys
+-/
+
 /-! ## Map type signatures -/
 
 Signature Cpp.Map.empty : Map K V

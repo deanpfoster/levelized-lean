@@ -21,6 +21,21 @@ namespace Cpp
 
 variable {T : Type} [StrongOrd T]
 
+/-! ## Vocabulary — definitions that appear in theorem types
+
+  inductive Ordering := lt | eq | gt       (C++ strong_ordering)
+  inductive WeakOrdering := lt | equivalent | gt
+  inductive PartialOrdering := lt | equivalent | gt | unordered
+
+  class StrongOrd (T : Type) where
+    strongCmp : T → T → Ordering
+    cmp_refl : ∀ a, strongCmp a a = .eq
+    cmp_flip : ∀ a b, (strongCmp a b).flip = strongCmp b a
+    cmp_lt_trans : ∀ a b c, strongCmp a b = .lt → strongCmp b c = .lt → strongCmp a c = .lt
+    cmp_eq_trans : ∀ a b c, strongCmp a b = .eq → strongCmp b c = .eq → strongCmp a c = .eq
+  Instances: Nat, Int, Pair T1 T2 (lexicographic)
+-/
+
 /-! ## Type signatures -/
 
 Signature Cpp.Ordering.flip : Ordering → Ordering

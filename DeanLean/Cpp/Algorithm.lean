@@ -19,6 +19,16 @@ namespace Cpp
 
 variable {T : Type} [StrongOrd T]
 
+/-! ## Vocabulary — definitions that appear in theorem types
+
+  cmpLe a b := StrongOrd.strongCmp a b ≠ Ordering.gt
+    (the ≤ relation derived from three-way comparison)
+
+  class StrongOrdEq (T) [StrongOrd T] : Prop where
+    cmp_eq_imp_eq : ∀ (a b : T), StrongOrd.strongCmp a b = .eq → a = b
+    (comparison-equal implies actually equal — needed for min/max commutativity)
+-/
+
 /-! ## Signatures -/
 
 Signature Cpp.cppMin : {T : Type} → [StrongOrd T] → T → T → T

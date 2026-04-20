@@ -73,4 +73,41 @@ ProvenTheorem cmp_less_correct :
 ProvenTheorem cmp_greater_flip :
     ∀ [IntPromotable T] [IntPromotable U] (t : T) (u : U), cmp_greater_flip_prop t u
 
+/-! ## Cross-signedness comparison properties (tested) -/
+
+TestedConjecture negative_never_equals_unsigned :
+    ∀ (s : Int8) (u : UInt8), s.val < 0 → cmp_equal s u = false
+
+TestedConjecture negative_less_than_unsigned :
+    ∀ (s : Int8) (u : UInt8), s.val < 0 → cmp_less s u = true
+
+TestedConjecture cmp_equal_symmetric :
+    ∀ [IntPromotable T] [IntPromotable U] (t : T) (u : U),
+    cmp_equal t u = cmp_equal u t
+
+TestedConjecture cmp_less_irreflexive :
+    ∀ [IntPromotable T] (t : T), cmp_less t t = false
+
+TestedConjecture cmp_less_asymmetric :
+    ∀ [IntPromotable T] [IntPromotable U] (t : T) (u : U),
+    cmp_less t u = true → cmp_less u t = false
+
+/-! ## in_range properties (tested) -/
+
+TestedConjecture in_range_min : ∀ (R : Type) [NumericLimits R] [IntPromotable R],
+    in_range R (NumericLimits.min : R) = true
+
+TestedConjecture in_range_max : ∀ (R : Type) [NumericLimits R] [IntPromotable R],
+    in_range R (NumericLimits.max : R) = true
+
+TestedConjecture negative_not_in_unsigned_range :
+    ∀ (s : Int8), s.val < 0 → in_range UInt8 s = false
+
+/-! ## lowest = min for integer types (tested) -/
+
+TestedConjecture lowest_eq_min_for_integers :
+    ∀ (T : Type) [NumericLimits T] [IntPromotable T],
+    NumericLimits.is_integer (self := ‹NumericLimits T›) = true →
+    IntPromotable.toInt (NumericLimits.lowest : T) = IntPromotable.toInt (NumericLimits.min : T)
+
 end Cpp

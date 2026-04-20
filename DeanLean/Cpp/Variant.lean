@@ -61,6 +61,24 @@ ProvenTheorem valueless_by_exception_false : ∀ (w : Variant2 T1 T2),
 -- variant_size
 ProvenTheorem variant_size_eq : ∀ (w : Variant2 T1 T2), w.variant_size = 2
 
+/-! ## Variant2 discriminator properties (tested) -/
+
+TestedConjecture index_determines_alternative : ∀ (w : Variant2 T1 T2) (i : Fin 2),
+    w.holds_alternative i = (w.index == i)
+
+TestedConjecture exactly_one_alternative : ∀ (w : Variant2 T1 T2),
+    w.holds_alternative ⟨0, by omega⟩ != w.holds_alternative ⟨1, by omega⟩
+
+TestedConjecture different_constructors_different_index :
+    ∀ (v1 : T1) (v2 : T2),
+    (Variant2.first v1 : Variant2 T1 T2).index ≠ (Variant2.second v2 : Variant2 T1 T2).index
+
+/-! ## visit is the universal eliminator (tested) -/
+
+TestedConjecture visit_determines_equality :
+    ∀ [DecidableEq R] (f1 : T1 → R) (f2 : T2 → R) (w1 w2 : Variant2 T1 T2),
+    w1 = w2 → w1.visit f1 f2 = w2.visit f1 f2
+
 end Cpp.Variant2
 
 namespace Cpp.Variant3
@@ -119,5 +137,15 @@ ProvenTheorem valueless_by_exception_false : ∀ (w : Variant3 T1 T2 T3),
 
 -- variant_size
 ProvenTheorem variant_size_eq : ∀ (w : Variant3 T1 T2 T3), w.variant_size = 3
+
+/-! ## Variant3 discriminator properties (tested) -/
+
+TestedConjecture index_determines_alternative : ∀ (w : Variant3 T1 T2 T3) (i : Fin 3),
+    w.holds_alternative i = (w.index == i)
+
+TestedConjecture exactly_one_alternative : ∀ (w : Variant3 T1 T2 T3),
+    (w.holds_alternative ⟨0, by omega⟩).toNat +
+    (w.holds_alternative ⟨1, by omega⟩).toNat +
+    (w.holds_alternative ⟨2, by omega⟩).toNat = 1
 
 end Cpp.Variant3

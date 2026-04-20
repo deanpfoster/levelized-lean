@@ -11,7 +11,7 @@ import DeanLean.Cpp.Tests.Optional
 
 namespace Cpp.Optional
 
-variable {T U : Type}
+variable {T U V : Type}
 
 Signature Cpp.Optional.has_value : Optional T → Bool
 Signature Cpp.Optional.value_or : Optional T → T → T
@@ -51,5 +51,30 @@ ProvenTheorem monad_pure_and_then : ∀ (v : T) (f : T → Optional U),
     (pure v : Optional T) >>= f = f v
 ProvenTheorem monad_nullopt_bind : ∀ (f : T → Optional U),
     (Optional.nullopt : Optional T) >>= f = Optional.nullopt
+
+/-! ## Monadic laws (tested, not yet proven for all cases) -/
+
+TestedConjecture monad_left_identity : ∀ (a : T) (f : T → Optional U),
+    (pure a : Optional T) >>= f = f a
+
+TestedConjecture monad_right_identity : ∀ (m : Optional T),
+    m >>= (pure · : T → Optional T) = m
+
+TestedConjecture monad_associativity : ∀ (m : Optional T) (f : T → Optional U)
+    (g : U → Optional V),
+    (m >>= f) >>= g = m >>= (fun x => f x >>= g)
+
+/-! ## transform preserves structure (functor law) -/
+
+TestedConjecture transform_compose : ∀ (o : Optional T) (f : T → U) (g : U → V),
+    (o.transform f).transform g = o.transform (g ∘ f)
+
+TestedConjecture transform_id : ∀ (o : Optional T),
+    o.transform id = o
+
+/-! ## and_then/or_else interaction -/
+
+TestedConjecture or_else_and_then_nullopt : ∀ (f : Unit → Optional T) (g : T → Optional U),
+    ((Optional.nullopt).or_else f).and_then g = (f ()).and_then g
 
 end Cpp.Optional

@@ -1,4 +1,4 @@
-import DeanLean.Cpp.Code.Sort
+import DeanLean.Cpp.Defs.Sort
 import DeanLean.Cpp.Proofs.Sort
 import DeanLean.Cpp.Tests.Sort
 
@@ -19,20 +19,13 @@ import DeanLean.Cpp.Tests.Sort
 
 namespace Cpp.Sort
 
-/-! ## Vocabulary — definitions that appear in theorem types -/
+/-! ## Vocabulary (imported from Defs/Sort.lean — all names used in theorems below)
 
--- IsSorted l means each element ≤ the next
---   IsSorted []           (nil)
---   IsSorted [x]          (single)
---   a ≤ b → IsSorted (b :: l) → IsSorted (a :: b :: l)   (cons)
--- (defined in Code/Sort.lean as an inductive)
-
--- IsPermutation l₁ l₂ := l₁.Perm l₂  (standard library permutation)
-
-/-! ## Signatures -/
-
-Signature Cpp.Sort.isSorted : List Nat → Bool
-Signature Cpp.Sort.insertionSort : List Nat → List Nat
+  IsSorted : List Nat → Prop       — inductive: nil, single, cons (a ≤ b → ...)
+  IsPermutation l₁ l₂ := l₁.Perm l₂
+  isSorted : List Nat → Bool       — decidable check
+  insertionSort : List Nat → List Nat
+-/
 
 /-! ## Proven theorems: insertionSort correctness -/
 

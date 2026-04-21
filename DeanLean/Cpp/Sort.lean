@@ -1,6 +1,5 @@
 import DeanLean.Cpp.Defs.Sort
-import DeanLean.Cpp.Proofs.Sort
-import DeanLean.Cpp.Tests.Sort
+import DeanLean.Cpp.Proofs.SortExports
 
 /-! # Sorting algorithms formalized and verified
 

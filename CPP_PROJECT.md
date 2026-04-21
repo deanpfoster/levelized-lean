@@ -136,6 +136,67 @@ level except `UnprovenConjecture` is now compiler-enforced.
 - Exception safety guarantees (irrelevant in pure Lean)
 - Template metaprogramming (no direct analogue)
 
+## Module maturity stages
+
+A module can start simple and grow into full enforcement. The macros
+(`ProvenTheorem`, `TestedConjecture`) work at every stage — they give
+you evidence tracking from day one. The file split is about visibility
+and enforcement, not about the macros.
+
+### Stage 1: Prototype (one file)
+
+```
+Sort.lean    ← definitions, proofs, tests, theorems — all in one file
+```
+
+Everything lives together. `ProvenTheorem` still checks that `_proof`
+exists; `TestedConjecture` still requires `_test`. The evidence
+hierarchy is enforced even in a single file. Good for exploration
+and rapid iteration. Start here.
+
+### Stage 2: Separated (conventional levelized lean)
+
+```
+Sort.lean           ← header: Signature + ProvenTheorem + TestedConjecture
+Code/Sort.lean      ← definitions + implementation
+Proofs/Sort.lean    ← proofs (named foo_proof)
+Tests/Sort.lean     ← tests (named foo_test)
+```
+
+Header imports Code, Proofs, and Tests. Consumers read only the header.
+Proofs can change without affecting the header's meaning. But the header
+can see everything in Code — no enforcement that theorems only reference
+"vocabulary" types. A sneaky definition in Code could leak into a theorem.
+
+### Stage 3: Enforced (full vocabulary control)
+
+```
+Sort.lean                  ← header: imports Defs + ProofExports only
+Defs/Sort.lean             ← vocabulary: types and functions used in theorems
+Code/Sort.lean             ← imports Defs, adds implementation helpers
+Proofs/Sort.lean           ← proofs
+Proofs/SortExports.lean    ← auto-generated: re-exports only _proof names
+Tests/Sort.lean            ← tests
+Tests/SortExports.lean     ← auto-generated: re-exports only _test names
+```
+
+The header imports `Defs/` (not `Code/`) and `Proofs/SortExports` (not
+`Proofs/Sort`). This means:
+- Theorems can only reference names from Defs — compiler-enforced
+- Proof files can't smuggle definitions into the header
+- The exports files are auto-generated from the header by `generate_exports.sh`
+- `Code/` is invisible to the header entirely
+
+The enforcement is structural (Lean's import system), not a custom macro.
+
+### When to promote
+
+- **1 → 2**: When the file gets long, or when you want proof changes to
+  stop triggering recompilation of consumers.
+- **2 → 3**: When you want to guarantee that the header is self-contained —
+  that a reader never needs to open Code or Proofs to understand a theorem.
+  Run `generate_exports.sh` after adding theorems to the header.
+
 ## Lessons for other formalization projects
 
 1. **Start with the easy modules** to establish patterns. Pair and Optional
@@ -148,7 +209,9 @@ level except `UnprovenConjecture` is now compiler-enforced.
 
 3. **The header IS the spec**. If a reader (human or LLM) can't understand
    what a module provides by reading only the header, the header is
-   incomplete. Proofs and code are implementation details.
+   incomplete. Proofs and code are implementation details. Vocabulary
+   definitions that appear in theorem types belong in the header (or in
+   Defs/ which the header imports).
 
 4. **Parallel agents work when the architecture is right**. Levelized file
    structure enables embarrassingly parallel development. Each module is

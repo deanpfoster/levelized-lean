@@ -1,4 +1,4 @@
-import DeanLean.Cpp.Code.Map
+import DeanLean.Cpp.Defs.Map
 import DeanLean.Cpp.Proofs.Map
 import DeanLean.Cpp.Tests.Map
 

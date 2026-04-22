@@ -1,4 +1,4 @@
-import DeanLean.Cpp.Code.Optional
+import DeanLean.Cpp.Defs.Optional
 import DeanLean.Cpp.Proofs.Optional
 import DeanLean.Cpp.Tests.Optional
 

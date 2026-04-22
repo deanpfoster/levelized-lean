@@ -1,4 +1,4 @@
-import DeanLean.Cpp.Code.Vector
+import DeanLean.Cpp.Defs.Vector
 import DeanLean.Cpp.Proofs.Vector
 import DeanLean.Cpp.Tests.Vector
 

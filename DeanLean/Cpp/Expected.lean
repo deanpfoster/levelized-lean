@@ -1,4 +1,4 @@
-import DeanLean.Cpp.Code.Expected
+import DeanLean.Cpp.Defs.Expected
 import DeanLean.Cpp.Proofs.Expected
 import DeanLean.Cpp.Tests.Expected
 

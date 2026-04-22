@@ -1,4 +1,4 @@
-import DeanLean.Cpp.Code.Ordering
+import DeanLean.Cpp.Defs.Ordering
 import DeanLean.Cpp.Proofs.Ordering
 import DeanLean.Cpp.Tests.Ordering
 

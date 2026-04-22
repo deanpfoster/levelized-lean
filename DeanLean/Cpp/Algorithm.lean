@@ -1,4 +1,4 @@
-import DeanLean.Cpp.Code.Algorithm
+import DeanLean.Cpp.Defs.Algorithm
 import DeanLean.Cpp.Proofs.Algorithm
 import DeanLean.Cpp.Tests.Algorithm
 

@@ -1,4 +1,4 @@
-import DeanLean.Cpp.Code.Concepts
+import DeanLean.Cpp.Defs.Concepts
 import DeanLean.Cpp.Proofs.Concepts
 import DeanLean.Cpp.Tests.Concepts
 

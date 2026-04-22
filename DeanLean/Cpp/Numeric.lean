@@ -1,4 +1,4 @@
-import DeanLean.Cpp.Code.Numeric
+import DeanLean.Cpp.Defs.Numeric
 import DeanLean.Cpp.Proofs.Numeric
 import DeanLean.Cpp.Tests.Numeric
 

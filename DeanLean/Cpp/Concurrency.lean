@@ -1,4 +1,4 @@
-import DeanLean.Cpp.Code.Concurrency
+import DeanLean.Cpp.Defs.Concurrency
 import DeanLean.Cpp.Proofs.Concurrency
 import DeanLean.Cpp.Tests.Concurrency
 

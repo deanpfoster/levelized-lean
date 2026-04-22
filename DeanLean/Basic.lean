@@ -46,33 +46,39 @@ macro "TestedConjecture " n:ident " : " t:term : command => do
 macro "UnprovenConjecture " n:ident " : " t:term : command =>
   `(theorem $n : $t := by sorry)
 
-open Lean Elab Command in
-syntax "DerivedConjecture " ident " : " term " assuming " sepBy1(ident, ", ") : command
+private def findSorryDeps (env : Lean.Environment) (info : Lean.ConstantInfo) : Array Lean.Name := Id.run do
+  let consts := info.getUsedConstantsAsSet
+  let mut result : Array Lean.Name := #[]
+  for c in consts do
+    if c == ``sorryAx then continue
+    match env.find? c with
+    | some cinfo =>
+      if cinfo.getUsedConstantsAsSet.contains ``sorryAx then
+        result := result.push c
+    | none => pure ()
+  return result
 
 open Lean Elab Command in
-elab_rules : command
-  | `(DerivedConjecture $n : $t assuming $[$deps],*) => do
-    -- Check each dependency exists in the environment
-    for dep in deps do
-      let depName := dep.getId
-      let env ← getEnv
-      match env.find? depName with
-      | some _ => pure ()
-      | none =>
-        -- Try with current namespace prefix
-        let ns ← getCurrNamespace
-        let fullName := ns ++ depName
-        let env ← getEnv
-        match env.find? fullName with
-        | some _ => pure ()
-        | none => throwError s!"DerivedConjecture dependency '{depName}' not found in environment"
-    -- Check the derivation exists
-    let derivationName := Lean.mkIdent (n.getId.appendAfter "_derivation")
-    elabCommand (← `(
-      set_option linter.unusedVariables false in
-      noncomputable def _dc_check := $derivationName))
-    -- The theorem itself is sorry (the assumptions aren't all proven yet)
-    elabCommand (← `(theorem $n : $t := by sorry))
+elab "DerivedConjecture " n:ident " : " t:term : command => do
+  let name := n.getId
+  let ns ← getCurrNamespace
+  let derivationId := name.appendAfter "_derivation"
+  let derivationName := Lean.mkIdent derivationId
+  elabCommand (← `(
+    set_option linter.unusedVariables false in
+    noncomputable def _dc_check := $derivationName))
+  let env ← getEnv
+  let fullName := ns ++ derivationId
+  let info? := env.find? fullName |>.orElse fun _ => env.find? derivationId
+  match info? with
+  | none => logWarning m!"DerivedConjecture: could not find '{derivationId}' for dependency analysis"
+  | some info =>
+    let sorryDeps := findSorryDeps env info
+    if sorryDeps.isEmpty then
+      logInfo m!"DerivedConjecture {name}: no sorry dependencies — consider promoting to ProvenTheorem"
+    else
+      logInfo m!"DerivedConjecture {name} depends on: {sorryDeps}"
+  elabCommand (← `(theorem $n : $t := by sorry))
 
 macro "FastHeader " n:ident " : " t:term : command =>
   `(axiom $n : $t)

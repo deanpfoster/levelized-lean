@@ -31,10 +31,23 @@ elab "PartialSignature " n:ident " : " t:term : command => do
   | none   => throwError s!"{name} not found in environment"
   elabCommand (← `(section variable (_sig_check : $t := $(n)) end))
 
-open Lean in
-macro "ProvenTheorem " n:ident " : " t:term : command => do
-  let proofName := Lean.mkIdent (n.getId.appendAfter "_proof")
-  `(theorem $n : $t := $proofName)
+open Lean Elab Command in
+elab "ProvenTheorem " n:ident " : " t:term : command => do
+  let name := n.getId
+  let proofName := name.appendAfter "_proof"
+  let derivationName := name.appendAfter "_derivation"
+  let env ← getEnv
+  let ns ← getCurrNamespace
+  let hasProof := (env.find? (ns ++ proofName)).isSome || (env.find? proofName).isSome
+  let hasDeriv := (env.find? (ns ++ derivationName)).isSome || (env.find? derivationName).isSome
+  if hasProof then
+    let rid := Lean.mkIdent proofName
+    elabCommand (← `(theorem $n : $t := $rid))
+  else if hasDeriv then
+    let rid := Lean.mkIdent derivationName
+    elabCommand (← `(theorem $n : $t := $rid))
+  else
+    throwError s!"ProvenTheorem {name}: neither '{proofName}' nor '{derivationName}' found"
 
 open Lean in
 macro "TestedConjecture " n:ident " : " t:term : command => do

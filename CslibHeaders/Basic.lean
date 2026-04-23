@@ -28,13 +28,36 @@ macro "CheckTheorem " src:term " : " t:term : command =>
   `(set_option linter.unusedVariables false in
     noncomputable example : $t := $src)
 
--- Vocabulary: define-or-verify via elaboration (not env.find?).
--- Uses try/catch so `open` namespaces work correctly.
-open Lean Elab Command in
+-- Vocabulary: define-or-verify.
+-- If val elaborates: check that n resolves to the same constant.
+-- If val doesn't elaborate: define n := val.
+open Lean Elab Command Term in
 elab "Vocabulary " n:ident " := " val:term : command => do
+  let stx ← `(
+    set_option linter.unusedVariables false in
+    noncomputable example := $val)
   try
-    elabCommand (← `(
-      set_option linter.unusedVariables false in
-      noncomputable example := $val))
-  catch _ =>
-    elabCommand (← `(noncomputable def $n := $val))
+    elabCommand stx
+    -- val exists. Now verify n refers to the same thing.
+    -- Elaborate both in term mode and compare the resulting expressions.
+    let nExpr ← liftTermElabM <| do
+      let e ← elabTerm (← `($n)) none
+      instantiateMVars e
+    let vExpr ← liftTermElabM <| do
+      let e ← elabTerm val none
+      instantiateMVars e
+    -- Extract the head constant from each
+    let nHead := nExpr.getAppFn.constName?
+    let vHead := vExpr.getAppFn.constName?
+    match nHead, vHead with
+    | some nn, some vn =>
+      if nn != vn then
+        throwError s!"Vocabulary mismatch: '{n.getId}' resolves to '{nn}' but value resolves to '{vn}'"
+    | _, _ => pure () -- Can't compare, just accept
+  catch e =>
+    -- val didn't elaborate — might be because n doesn't exist yet
+    -- Try defining it
+    try
+      elabCommand (← `(noncomputable def $n := $val))
+    catch _ =>
+      throw e

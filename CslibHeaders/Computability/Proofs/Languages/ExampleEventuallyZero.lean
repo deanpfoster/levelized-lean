@@ -1,0 +1,6 @@
+import Cslib.Computability.Languages.ExampleEventuallyZero
+
+open Cslib.ωLanguage.Example
+
+noncomputable def eventually_zero_accepted_by_na_buchi_proof := @eventually_zero_accepted_by_na_buchi
+noncomputable def eventually_zero_not_omegaLim_proof := @eventually_zero_not_omegaLim

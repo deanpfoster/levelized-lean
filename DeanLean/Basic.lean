@@ -95,3 +95,10 @@ elab "DerivedConjecture " n:ident " : " t:term : command => do
 
 macro "FastHeader " n:ident " : " t:term : command =>
   `(axiom $n : $t)
+
+open Lean Elab Command in
+elab "ExternalTheorem " n:ident " := " src:term " : " t:term : command => do
+  elabCommand (← `(
+    set_option linter.unusedVariables false in
+    noncomputable def _ext_check : $t := $src))
+  elabCommand (← `(noncomputable def $n : $t := $src))

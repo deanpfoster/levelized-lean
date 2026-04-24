@@ -1,48 +1,122 @@
-# Physical Design for Lean 4: Breaking the Elaboration Bottleneck
+# Physical Design for Lean 4: Evidence Levels and Header Files
 
 **To:** Leo de Moura & the Lean Core Team  
-**Subject:** Resolving Serial Build Cascades via Signature-Based Incremental Compilation
+**Subject:** Complementing `module` with evidence-level headers for readability and AI
 
-## 1. The Core Problem: Physical Coupling in the Module System
+## 1. Acknowledgment: `module` Already Solves the Cascade
 
-Lean 4’s new module scopes provide excellent control over logical visibility and namespaces. However, the build infrastructure (Lake/Elan) currently suffers from a critical limitation in its physical design: **the coupling of logical truth to physical compilation artifacts.**
+We originally proposed signature-based incremental compilation to break
+recompilation cascades. **We now know that Lean 4.30's `module` keyword
+already does this.** Our testing on CSLib (130 files, 768 theorems)
+confirms: changing a proof body in a `module` file does NOT cascade to
+downstream dependents. The semantic hashing is built into the compiler.
 
-Currently, a Lean module (`.olean`) is the atomic unit of dependency. If module `A` contains both a public definition and a heavy, private proof, and module `B` imports `A`, any modification to the proof in `A` alters the `A.olean` export hash. 
+This is exactly what we asked for. Well done.
 
-Even if the public interface of `A` remains bit-for-bit identical, Lake’s hash-based dependency tracking detects a change and triggers a full re-elaboration of `B`. In massive codebases like Mathlib, or in deep $N$-level dependency chains, this results in a monolithic, serial recompilation cascade. Cloud caching (`lake exe cache`) treats the symptom but does not solve the underlying architectural bottleneck.
+## 2. What `module` Doesn't Solve
 
-## 2. The Solution: Signature-Based Incremental Compilation
+The cascade was one problem. The others remain:
 
-To unlock true scalability for Lean 4, we must decouple the *Interface* (the "what") from the *Implementation* (the "how"). We propose integrating **Signature-Based Incremental Compilation** (or Semantic Hashing) natively into the Elaboration and Build pipeline.
+### A. Evidence Levels: What's proven vs. tested vs. conjectured?
 
-By allowing the compiler to distinguish between a change in a theorem's signature and a change in its proof body, we can halt the recompilation cascade at the exact point of mutation.
+In standard Lean, `theorem foo : T := by sorry` and `theorem foo : T := by exact proof`
+look identical to a consumer who imports the module. Both are `theorem`.
+There's no way to know the evidence level without opening the file.
 
-### The Prototype Architecture ("Levelized Lean")
-We have prototyped this methodology externally by manually enforcing an Interface-Implementation split:
-1. **Signature Proxies (`M_Interface.lean`):** Contains only `Prop` signatures and definitions (using `opaque` or `axiom` as placeholders).
-2. **Implementations (`M_Proof.lean`):** Imports the Interface and provides the actual proofs (e.g., via `attribute [implementation]`).
-3. **Strict Downstream Linking:** All downstream modules are restricted to importing *only* the Interface module.
+We propose a 5-level evidence hierarchy, each compiler-enforced:
 
-To handle logical cycles (mutual recursion), we employ a higher-order parameterization strategy, breaking the logical loop into an acyclic physical tree consisting of the Interface, parameterized implementations, and a higher-level knot-tying module.
+```
+○ UnprovenConjecture    — sorry IS the theorem
+◐ TestedConjecture      — sorry is the ∀ (concrete witness required)
+◑ DecomposedConjecture  — sorry is in the lemmas (all lemmas tested)
+◕ DerivedConjecture     — sorry is in other modules (your proof is real)
+● ProvenTheorem         — no sorry anywhere
+```
 
-## 3. The Wins for Lean 4
+Each level requires progressively more evidence. A reader scanning
+a header sees the level in the macro name — no compilation needed.
+`DecomposedConjecture` FAILS to compile if any lemma lacks a test.
+`DerivedConjecture` auto-discovers sorry dependencies via
+`getUsedConstantsAsSet` metaprogramming.
 
-Implementing this physical design natively within Lake and the Lean compiler yields three transformative benefits:
+This is ~150 lines of macros. It layers on top of Lean's existing
+theorem mechanism without modifying the compiler.
 
-### A. Massive Non-Monotonic Parallelization
-Under the current paradigm, verifying a 98-level deep proof chain is an $O(N)$ serial operation. With isolated interfaces, it becomes an $O(1)$ parallel operation. 
-If an interface contract is established, 98 separate CPU cores can simultaneously verify all 98 levels in isolation. Core $N$ assumes the interface of $N-1$ is true, checks its local proof, and reports back. The build system simply verifies that all interface contracts were satisfied at the end.
+### B. Readability: 77% Line Reduction
 
-### B. Zero-Cost Proof Refactoring
-A developer can refactor a massive, heavily-depended-upon proof in a low-level Mathlib file without triggering a downstream cascade. If the semantic hash of the declarations remains constant, Lake can intelligently skip re-elaborating the thousands of files that import it.
+CSLib's 20,837 lines of source reduce to 4,173 lines of headers + vocabulary.
+A reader (human or LLM) understands the entire library API without
+seeing a single proof body.
 
-### C. Low-Latency AI Verification Pipelines
-For AI-driven formal verification, latency is the primary bottleneck. LLM agents exploring proof spaces require instant feedback on type-correctness and interface validity. By utilizing a "Short-Circuit" switch (linking downstream modules to axiom-based interfaces during the exploration phase), AI agents can iterate on complex proofs in sub-second time, deferring the full Kernel proof-check to the final commit phase.
+The header contains:
+- **Vocabulary**: definitions that appear in theorem types
+- **Theorem signatures**: with evidence level
+- **Nothing else**: no proof bodies, no tactic blocks, no internal lemmas
 
-## 4. Proposal & Next Steps
+For AI verification pipelines, this is the key win. An LLM using the
+library needs theorem signatures, not proof bodies. Our benchmark shows
+42% fewer tokens for identical comprehension accuracy.
 
-The manual "Intrusive" levelization we are running at `lean4.ai` proves that O(1) parallel verification is possible today, but it requires heavy boilerplate. 
+### C. Vocabulary Enforcement via `Defs/`
 
-We propose collaborating to bring this to the core toolchain. The goal is a native capability where Lake can say: *"The source file changed, but the resulting semantic hash of its public declarations is identical; therefore, downstream dependents are still valid."*
+A `Defs/` directory holds definitions that appear in theorem types.
+The header imports `Defs/` but NOT `Code/` — so theorems in the header
+can only reference vocabulary definitions. This is enforced by Lean's
+import system, not custom macros.
 
-This evolution from logical encapsulation to physical decoupling is the key to scaling Lean 4 beyond its current limits.
+This prevents internal helpers from leaking into the public API.
+
+### D. Fractional Proof Tracking
+
+Inspired by Theorem.dev's "fractional proof decomposition":
+decompose a theorem into lemmas, prove some, test others.
+`DecomposedConjecture` tracks the fraction automatically
+and requires every piece to have at least a test witness.
+
+## 3. What We Built
+
+Working prototype at `lean4.ai/levelized-lean.html`:
+
+- Full CSLib headerization: 459 compiler-verified theorem entries
+- Full CSLib intrusive refactor: 121 Defs files, all building
+- C++ standard library formalization: 13 modules, 226 theorems
+- Verified interval arithmetic: 34 proven containment theorems
+- Happens-before memory model: 22 proven concurrency theorems
+- Benchmark: headers give 42% token savings for LLM comprehension
+- Fast mode toggle: `set_option levelized.fast true` for axiom-based headers
+
+## 4. For Mathlib
+
+The `module` keyword's cascade prevention presumably extends to Mathlib
+once Mathlib adopts `module`. The evidence hierarchy and header files
+would complement this:
+
+- **Progress tracking**: `grep DecomposedConjecture *.lean` instantly shows
+  partially-proven theorems and what's blocking them
+- **LLM access**: Mathlib headers would give AI agents the full API in
+  ~16K lines instead of ~200K+ lines of proof-heavy source
+- **Contribution guidance**: new contributors see which conjectures are
+  closest to promotion (highest fraction of proven lemmas)
+
+## 5. O(1) Parallel Verification
+
+The `module` keyword's semantic hashing should also enable O(1) parallel
+verification: if proof changes at level N don't invalidate level N+1,
+then all levels can be compiled simultaneously. Does Lake already exploit
+this? If so, the parallelization win from our original pitch is also
+already solved.
+
+Our `FastHeader` (axiom-based headers) would still be useful for the
+extreme case: an LLM exploring proof space wants sub-second type-checking
+without waiting for ANY proof to compile. But for normal development,
+`module` + Lake parallelism may be sufficient.
+
+## 6. The Ask
+
+The evidence hierarchy is 150 lines of macros that work today. We're not
+asking for compiler changes — `module` already solved the hard part.
+
+We'd welcome feedback on:
+1. Would the Lean community adopt evidence-level macros?
+2. Should vocabulary enforcement (`Defs/`) be a convention or tooling?
+3. Is there interest in header generation for Mathlib?

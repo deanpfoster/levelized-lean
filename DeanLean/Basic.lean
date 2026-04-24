@@ -102,11 +102,25 @@ elab "DerivedConjecture " n:ident " : " t:term : command => do
   match info? with
   | none => logWarning m!"DerivedConjecture: could not find '{derivationId}' for dependency analysis"
   | some info =>
+    let allDeps := info.getUsedConstantsAsSet
     let sorryDeps := findSorryDeps env info
+    -- Count total non-builtin theorem deps vs sorry deps for fraction
+    let mut totalTheorems : Nat := 0
+    let mut provenTheorems : Nat := 0
+    for c in allDeps do
+      if c == ``sorryAx then continue
+      match env.find? c with
+      | some cinfo =>
+        if let .thmInfo _ := cinfo then
+          totalTheorems := totalTheorems + 1
+          if !cinfo.getUsedConstantsAsSet.contains ``sorryAx then
+            provenTheorems := provenTheorems + 1
+      | none => pure ()
     if sorryDeps.isEmpty then
       logInfo m!"DerivedConjecture {name}: no sorry dependencies — consider promoting to ProvenTheorem"
     else
-      logInfo m!"DerivedConjecture {name} depends on: {sorryDeps}"
+      let pct := if totalTheorems > 0 then provenTheorems * 100 / totalTheorems else 0
+      logInfo m!"DerivedConjecture {name}: {provenTheorems}/{totalTheorems} theorem deps proven ({pct}%)\n  sorry deps: {sorryDeps}"
   elabCommand (← `(theorem $n : $t := by sorry))
 
 -- FractionalTheorem: explicit decomposition with proof coverage tracking

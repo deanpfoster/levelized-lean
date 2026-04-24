@@ -86,7 +86,12 @@ elab "TestedConjecture " n:ident " : " t:term : command => do
     let vacuousIndicators := #[``absurd, ``False.elim, ``Not.elim, ``False.rec]
     let hasVacuous := vacuousIndicators.any fun c => usedConsts.contains c
     if hasVacuous then
-      logWarning m!"TestedConjecture {name}: ⚠ test witness may be vacuous (uses absurd/False.elim). Consider providing a positive test where the precondition is satisfied."
+      -- Check if the test is marked as intentionally classical
+      let classicalName := testId.appendAfter "_is_classical"
+      let fullClassical := ns ++ classicalName
+      let isMarkedClassical := (env.find? fullClassical).isSome || (env.find? classicalName).isSome
+      if !isMarkedClassical then
+        logWarning m!"TestedConjecture {name}: ⚠ test witness may be vacuous (uses absurd/False.elim). Add `def {testId}_is_classical := ()` to suppress, or provide a positive test."
   | none => pure ()
   elabCommand (← `(theorem $n : $t := by sorry))
 

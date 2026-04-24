@@ -123,55 +123,48 @@ elab "DerivedConjecture " n:ident " : " t:term : command => do
       logInfo m!"DerivedConjecture {name}: {provenTheorems}/{totalTheorems} theorem deps proven ({pct}%)\n  sorry deps: {sorryDeps}"
   elabCommand (← `(theorem $n : $t := by sorry))
 
--- FractionalTheorem: explicit decomposition with proof coverage tracking
--- Shows which lemmas are proven vs tested vs unproven
+-- DecomposedConjecture: broken into pieces, ALL pieces must be at least tested.
+-- Strictly stronger than TestedConjecture, weaker than DerivedConjecture.
+-- The derivation is a real proof; the pieces are lemmas that may be sorry but must have _test.
 open Lean Elab Command in
-elab "FractionalTheorem " n:ident " : " t:term " from " deps:ident,+ : command => do
+elab "DecomposedConjecture " n:ident " : " t:term : command => do
   let name := n.getId
   let ns ← getCurrNamespace
   let derivationId := name.appendAfter "_derivation"
   let derivationName := Lean.mkIdent derivationId
-  -- Check derivation exists
   elabCommand (← `(
     set_option linter.unusedVariables false in
-    noncomputable def _ft_check := $derivationName))
-  -- Analyze each dependency
+    noncomputable def _decomp_check := $derivationName))
   let env ← getEnv
-  let scopes := (← getOpenDecls).filterMap fun d => match d with
-    | .simple ns _ => some ns
-    | _ => none
-  let findConst (name : Lean.Name) : Option Lean.ConstantInfo :=
-    (env.find? (ns ++ name)) |>.orElse fun _ =>
-    (env.find? name) |>.orElse fun _ =>
-    scopes.findSome? fun s => env.find? (s ++ name)
-  let mut proven := 0
-  let mut tested := 0
-  let mut unproven := 0
-  let mut details : Array String := #[]
-  for dep in deps.getElems do
-    let depName := dep.getId
-    match findConst depName with
-    | some info =>
-      if info.getUsedConstantsAsSet.contains ``sorryAx then
-        -- Has sorry — is it tested or unproven?
-        let testName := depName.appendAfter "_test"
-        if (findConst testName).isSome then
-          tested := tested + 1
-          details := details.push s!"  {depName}: tested ◐"
-        else
-          unproven := unproven + 1
-          details := details.push s!"  {depName}: unproven ○"
+  let fullName := ns ++ derivationId
+  let info? := env.find? fullName |>.orElse fun _ => env.find? derivationId
+  match info? with
+  | none => logWarning m!"DecomposedConjecture: could not find '{derivationId}'"
+  | some info =>
+    let sorryDeps := findSorryDeps env info
+    let scopes := (← getOpenDecls).filterMap fun d => match d with
+      | .simple ns _ => some ns
+      | _ => none
+    let findConst (n : Lean.Name) : Option Lean.ConstantInfo :=
+      (env.find? (ns ++ n)) |>.orElse fun _ =>
+      (env.find? n) |>.orElse fun _ =>
+      scopes.findSome? fun s => env.find? (s ++ n)
+    -- Check ALL sorry deps have _test witnesses
+    let mut allTested := true
+    let mut details : Array String := #[]
+    for dep in sorryDeps do
+      let testName := dep.appendAfter "_test"
+      if (findConst testName).isSome then
+        details := details.push s!"  {dep}: tested ◐"
       else
-        proven := proven + 1
-        details := details.push s!"  {depName}: proven ●"
-    | none =>
-      unproven := unproven + 1
-      details := details.push s!"  {depName}: NOT FOUND ✗"
-  let total := proven + tested + unproven
-  let pct := if total > 0 then proven * 100 / total else 0
-  logInfo m!"FractionalTheorem {name}: {proven}/{total} proven ({pct}%)\n{"\n".intercalate details.toList}"
-  if proven == total then
-    logInfo m!"  → All lemmas proven! Consider promoting to ProvenTheorem."
+        allTested := false
+        details := details.push s!"  {dep}: UNTESTED ✗ — needs {testName}"
+    if !allTested then
+      throwError s!"DecomposedConjecture {name}: all sorry deps must be at least TestedConjecture\n{"\n".intercalate details.toList}"
+    if sorryDeps.isEmpty then
+      logInfo m!"DecomposedConjecture {name}: no sorry deps — consider promoting to DerivedConjecture or ProvenTheorem"
+    else
+      logInfo m!"DecomposedConjecture {name}: all {sorryDeps.size} lemmas tested ◐\n{"\n".intercalate details.toList}"
   elabCommand (← `(theorem $n : $t := by sorry))
 
 macro "FastHeader " n:ident " : " t:term : command =>

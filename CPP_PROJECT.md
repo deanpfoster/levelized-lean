@@ -78,24 +78,30 @@ and edits to it are additive (each agent appends one import line).
 We ran 3 agents in parallel across 3 rounds (9 total) with zero merge
 conflicts. This is a direct consequence of the levelized file structure.
 
-### TestedConjecture enforcement matters
+### The evidence hierarchy: where are the sorry's?
 
-We started with `TestedConjecture` expanding to bare `sorry` — no
-connection to any test. After discovering that conjectures could exist
-with zero backing evidence, we changed the macro to require a `_test`
-witness:
+Every theorem claim has a sorry somewhere — the question is where.
+The hierarchy tracks this precisely, each level strictly stronger:
 
 ```
-TestedConjecture foo : ∀ (n : Nat), P n
+○ UnprovenConjecture    — sorry IS the theorem. Zero evidence.
+◐ TestedConjecture      — sorry is the ∀. One concrete witness exists.
+◑ DecomposedConjecture  — sorry is in the LEMMAS. Real proof structure
+                          (derivation), all lemmas at least tested.
+◕ DerivedConjecture     — sorry is in OTHER HEADERS. Your proof is real;
+                          it only depends on promises from other modules.
+● ProvenTheorem         — no sorry ANYWHERE. Done.
 ```
 
-now fails to compile unless `foo_test` exists in scope (typically defined
-in Tests/). The witness is a concrete instance (e.g.,
-`def foo_test := show P 42 from rfl`). The universal claim is still
-`sorry`, but at least one case is machine-checked.
+Each level is compiler-enforced:
+- `TestedConjecture foo` fails without `foo_test`
+- `DecomposedConjecture foo` fails if any lemma in `foo_derivation` lacks a `_test`
+- `DerivedConjecture foo` auto-reports which external theorems still have sorry
+- `ProvenTheorem foo` fails if `foo_proof` or `foo_derivation` has any sorry
 
-This mirrors `ProvenTheorem foo` requiring `foo_proof`. Every evidence
-level except `UnprovenConjecture` is now compiler-enforced.
+Inspired by Theorem.dev's "fractional proof decomposition":
+decompose a theorem into pieces, prove some, test others, track the fraction.
+`DecomposedConjecture` is the Lean formalization of this idea.
 
 ## Current State
 

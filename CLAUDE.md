@@ -123,18 +123,40 @@ Functions: `cppMin`, `cppMax`, `cppClamp`, `minElement`, `maxElement`, `isSorted
 
 ## Macro Reference
 
+## Evidence Hierarchy (where are the sorry's?)
+
+Each level is strictly stronger than the one below. All are compiler-enforced.
+
+```
+○ UnprovenConjecture    — sorry is the whole theorem. Zero evidence.
+◐ TestedConjecture      — sorry is the ∀. At least one concrete witness (foo_test).
+◑ DecomposedConjecture  — sorry is in the lemmas. Real proof structure exists
+                          (foo_derivation), and ALL lemmas are at least tested.
+◕ DerivedConjecture     — sorry is in OTHER headers. Your derivation is real;
+                          it only depends on theorems promised by other modules.
+● ProvenTheorem         — no sorry anywhere. Unconditional proof (foo_proof).
+```
+
+Promotion path: each level's requirement is a strict superset of the level below.
+DecomposedConjecture FAILS if any lemma lacks a _test witness.
+DerivedConjecture auto-reports which other headers' theorems it depends on.
+ProvenTheorem accepts both foo_proof and foo_derivation (no rename needed).
+
+## Macro Reference
+
+Evidence macros:
+- `UnprovenConjecture foo : T` — bare sorry
+- `TestedConjecture foo : T` — requires `foo_test` in scope
+- `DecomposedConjecture foo : T` — requires `foo_derivation` + all sorry deps tested
+- `DerivedConjecture foo : T` — requires `foo_derivation`, auto-reports sorry deps
+- `ProvenTheorem foo : T` — requires `foo_proof` or `foo_derivation` (no sorry)
+
+Other macros:
 - `Signature Cpp.Foo.bar : T` — compiler-checks function exists with that type
-- `ProvenTheorem foo : T` — looks for `foo_proof` or `foo_derivation` (must exist)
-- `DerivedConjecture foo : T` — looks for `foo_derivation`, auto-reports sorry dependencies
-- `TestedConjecture foo : T` — requires `foo_test` def in scope, then sorry
-- `UnprovenConjecture foo : T` — bare sorry, no witness
 - `Wrap foo_proof := @Some.External.name` — alias for naming convention bridge
 - `FastHeader foo : T` — axiom, for breaking recompilation cascades
 - `VerifyAxiom foo : T` — CI-only: confirms fast-mode axiom matches real proof
 - `ExternalTheorem foo := @Lib.name : T` — wraps existing library theorem
 - `Vocabulary foo := @Lib.name` — define-or-verify for Defs files
-
-Evidence hierarchy (weakest → strongest):
-  Signature → UnprovenConjecture → TestedConjecture → DerivedConjecture → ProvenTheorem
 
 Fast mode: `set_option levelized.fast true` makes ProvenTheorem emit axioms.

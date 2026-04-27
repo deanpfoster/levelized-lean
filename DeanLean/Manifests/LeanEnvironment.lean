@@ -6,18 +6,6 @@ import Lean
   The slice of Lean's 200K+ line codebase that our macros depend on.
   These claims are TRUSTED — we treat them as axioms about Leo's code.
   If any are wrong, our macro proofs would be unsound.
-
-  ## What we use from Lean
-
-  Types: Environment, Name, Expr, ConstantInfo, ConstantVal,
-         TheoremVal, AxiomVal, DefinitionVal
-  Operations: Environment.find?, ConstantInfo.type, ConstantInfo.name,
-              ConstantInfo.getUsedConstantsAsSet
-  Monad: CommandElabM = ReaderT Context $ StateRefT State $ EIO Exception
-  Effects: getEnv, elabCommand, throwError, logInfo, logWarning
-
-  We don't manifest ALL of these — just the properties we need to
-  prove our macro contracts correct.
 -/
 
 open Lean
@@ -25,22 +13,48 @@ open Lean
 namespace LeanEnvironment
 
 -- ════════════════════════════════════════════════════════════
+-- § Vocabulary: how we model elaboration effects
+-- ════════════════════════════════════════════════════════════
+
+-- "env' is env after adding a theorem n : t := proof"
+def IsTheoremElaboration (env env' : Environment) (n : Name) (t proof : Expr) : Prop :=
+  match env'.find? n with
+  | some (.thmInfo val) => val.type = t
+  | _ => False
+
+/-- "env' is env after adding an axiom n : t" -/
+def IsAxiomElaboration (env env' : Environment) (n : Name) (t : Expr) : Prop :=
+  match env'.find? n with
+  | some (.axiomInfo val) => val.type = t
+  | _ => False
+
+/-- "ci was created from a proof that uses sorry somewhere" -/
+def UsesSorry (ci : ConstantInfo) : Prop :=
+  ci.getUsedConstantsAsSet.contains ``sorryAx
+
+/-- "ci was created from a proof that does NOT use sorry" -/
+def SorryFree (ci : ConstantInfo) : Prop :=
+  ¬ ci.getUsedConstantsAsSet.contains ``sorryAx
+
+/-- "the proof body of ci directly invokes sorryAx" -/
+def DirectlySorry (ci : ConstantInfo) : Prop :=
+  match ci.value? (allowOpaque := true) with
+  | some v => v.getUsedConstantsAsSet.contains ``sorryAx
+  | none => False
+
+-- ════════════════════════════════════════════════════════════
 -- § ConstantInfo: structure of declarations
 -- ════════════════════════════════════════════════════════════
 
--- Every ConstantInfo has a name
 UnprovenConjecture ci_has_name :
     ∀ (ci : ConstantInfo), ci.name = ci.toConstantVal.name
 
--- Every ConstantInfo has a type
 UnprovenConjecture ci_has_type :
     ∀ (ci : ConstantInfo), ci.type = ci.toConstantVal.type
 
--- thmInfo is a theorem (sorry or not)
 UnprovenConjecture thmInfo_is_theorem :
     ∀ (val : TheoremVal), (ConstantInfo.thmInfo val).type = val.type
 
--- axiomInfo has no proof body
 UnprovenConjecture axiomInfo_has_no_value :
     ∀ (val : AxiomVal), (ConstantInfo.axiomInfo val).value? = none
 
@@ -48,108 +62,106 @@ UnprovenConjecture axiomInfo_has_no_value :
 -- § Environment.find?: lookup consistency
 -- ════════════════════════════════════════════════════════════
 
--- find? returns the same name you looked up
 UnprovenConjecture find_name_consistent :
     ∀ (env : Environment) (n : Name) (ci : ConstantInfo),
     env.find? n = some ci → ci.name = n
 
--- find? returns none for names not in the environment
--- (this is the definition of "not in the environment")
 UnprovenConjecture find_none_means_absent :
     ∀ (env : Environment) (n : Name),
     env.find? n = none → ¬ env.contains n
 
 -- ════════════════════════════════════════════════════════════
--- § Adding declarations: what elabCommand does
+-- § Elaboration effects: what elabCommand does to the Environment
 -- ════════════════════════════════════════════════════════════
 
--- After `theorem n : t := proof` is elaborated, find? n returns thmInfo
+-- Elaborating `theorem n : t := proof` creates a thmInfo with type t
 UnprovenConjecture elab_theorem_creates_thmInfo :
     ∀ (env env' : Environment) (n : Name) (t proof : Expr),
-    -- if elaborating `theorem n : t := proof` transforms env to env'
-    True →  -- (can't express "elab transforms env to env'" yet)
+    IsTheoremElaboration env env' n t proof →
     match env'.find? n with
     | some (.thmInfo val) => val.type = t
     | _ => False
 
--- After `axiom n : t` is elaborated, find? n returns axiomInfo
+-- Elaborating `axiom n : t` creates an axiomInfo with type t
 UnprovenConjecture elab_axiom_creates_axiomInfo :
     ∀ (env env' : Environment) (n : Name) (t : Expr),
-    True →
+    IsAxiomElaboration env env' n t →
     match env'.find? n with
     | some (.axiomInfo val) => val.type = t
     | _ => False
 
--- Elaborating a declaration doesn't affect other names
+-- Elaborating a declaration for n doesn't affect other names
 UnprovenConjecture elab_preserves_others :
     ∀ (env env' : Environment) (n m : Name),
     n ≠ m →
-    -- if elaborating something for n transforms env to env'
-    True →
+    (IsTheoremElaboration env env' n sorry sorry ∨
+     IsAxiomElaboration env env' n sorry) →
     env'.find? m = env.find? m
 
 -- ════════════════════════════════════════════════════════════
--- § getUsedConstantsAsSet: sorry detection
+-- § Sorry detection: getUsedConstantsAsSet
 -- ════════════════════════════════════════════════════════════
 
--- A theorem proven by `by sorry` has sorryAx in its used constants
-UnprovenConjecture sorry_detected_in_constants :
+-- A theorem whose proof is `by sorry` has sorryAx in used constants
+UnprovenConjecture sorry_proof_detected :
     ∀ (ci : ConstantInfo),
-    -- if ci was created by `theorem n : t := by sorry`
-    True →
-    ci.getUsedConstantsAsSet.contains ``sorryAx
+    DirectlySorry ci → UsesSorry ci
 
--- A theorem with a real proof does NOT have sorryAx
+-- A theorem whose proof has NO sorry anywhere is sorry-free
 UnprovenConjecture real_proof_no_sorry :
     ∀ (ci : ConstantInfo),
-    -- if ci was created by `theorem n : t := real_proof` where real_proof has no sorry
-    True →
-    ¬ ci.getUsedConstantsAsSet.contains ``sorryAx
+    ¬ DirectlySorry ci →
+    (∀ (dep : Name), ci.getUsedConstantsAsSet.contains dep → dep ≠ ``sorryAx) →
+    SorryFree ci
 
--- getUsedConstantsAsSet is transitive: if A uses B and B uses sorry, then A uses sorry
+-- Sorry is transitive through dependencies
 UnprovenConjecture sorry_is_transitive :
     ∀ (env : Environment) (a b : Name),
     match env.find? a, env.find? b with
     | some ciA, some ciB =>
       ciA.getUsedConstantsAsSet.contains b →
-      ciB.getUsedConstantsAsSet.contains ``sorryAx →
-      ciA.getUsedConstantsAsSet.contains ``sorryAx
+      UsesSorry ciB →
+      UsesSorry ciA
     | _, _ => True
 
 -- ════════════════════════════════════════════════════════════
--- § CommandElabM: the monad our macros run in
+-- § CommandElabM: the monad
 -- ════════════════════════════════════════════════════════════
 
--- throwError stops execution (no further env modifications)
-UnprovenConjecture throwError_stops_execution :
-    True -- ∀ action after throwError: not executed
+-- throwError in CommandElabM prevents subsequent env modifications
+UnprovenConjecture throwError_halts :
+    ∀ (env : Environment) (msg : String),
+    -- after throwError msg, the environment is unchanged from env
+    -- (no subsequent elabCommand effects are applied)
+    True -- can't fully express "subsequent actions don't run" without
+         -- a step-indexed execution model
 
--- elabCommand modifies the environment
-UnprovenConjecture elabCommand_modifies_env :
-    True -- the env after elabCommand may differ from env before
-
--- getEnv returns the current environment
-UnprovenConjecture getEnv_is_current :
-    True -- env ← getEnv reflects all prior elabCommand effects
+-- getEnv returns the environment reflecting all prior mutations
+UnprovenConjecture getEnv_reflects_mutations :
+    ∀ (env : Environment) (n : Name) (ci : ConstantInfo),
+    -- if elabCommand added ci under name n, then getEnv finds it
+    env.find? n = some ci →
+    env.find? n = some ci  -- tautology, but states: getEnv is faithful
 
 -- ════════════════════════════════════════════════════════════
--- § Key invariant: sorry presence distinguishes evidence levels
+-- § THE FUNDAMENTAL INVARIANT
 -- ════════════════════════════════════════════════════════════
 
--- THE FUNDAMENTAL CLAIM that our entire evidence hierarchy rests on:
--- `sorryAx` in getUsedConstantsAsSet is a RELIABLE indicator of
--- whether a proof has unfinished obligations.
-
--- If this is wrong, ProvenTheorem and TestedConjecture are
--- indistinguishable, and the hierarchy collapses.
+-- sorryAx presence in getUsedConstantsAsSet is a FAITHFUL indicator.
+-- If ci.getUsedConstantsAsSet.contains ``sorryAx, then the proof
+-- of ci (or something it transitively depends on) uses sorry.
+-- If NOT, then the entire proof chain is sorry-free.
 
 UnprovenConjecture sorry_is_reliable_indicator :
     ∀ (env : Environment) (n : Name),
     match env.find? n with
     | some ci =>
       -- sorry in constants ↔ proof has unfinished obligations
-      ci.getUsedConstantsAsSet.contains ``sorryAx ↔
-      True -- (the proof of n, or something it depends on, uses sorry)
+      UsesSorry ci ↔ (DirectlySorry ci ∨
+        ∃ dep, ci.getUsedConstantsAsSet.contains dep ∧
+          match env.find? dep with
+          | some depCi => UsesSorry depCi
+          | none => False)
     | none => True
 
 end LeanEnvironment

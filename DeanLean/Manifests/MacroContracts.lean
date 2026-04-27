@@ -103,8 +103,8 @@ theorem TestedConjecture_is_correct_derivation :
   intro env n t h_pre
   -- By elab_theorem_creates_thmInfo, elaborating creates thmInfo
   have h1 := elab_theorem_creates_thmInfo
-  -- By sorry_detected_in_constants, sorry theorem has sorryAx
-  have h2 := sorry_detected_in_constants
+  -- By sorry_proof_detected, sorry theorem has sorryAx
+  have h2 := sorry_proof_detected
   sorry
 
 theorem evidence_levels_are_distinguishable_derivation :
@@ -112,8 +112,8 @@ theorem evidence_levels_are_distinguishable_derivation :
   intro env
   -- By real_proof_no_sorry: proven theorems lack sorryAx
   have h1 := real_proof_no_sorry
-  -- By sorry_detected_in_constants: sorry theorems have sorryAx
-  have h2 := sorry_detected_in_constants
+  -- By sorry_proof_detected: sorry theorems have sorryAx
+  have h2 := sorry_proof_detected
   -- Therefore the two are distinguishable
   sorry
 

@@ -52,28 +52,38 @@ def TestedConjectureSpec (env : Environment) (n : Name) (t : Expr) : Prop :=
     | .thmInfo val => val.type = t ∧ ci.getUsedConstantsAsSet.contains ``sorryAx
     | _ => False
 
-/-- Model of Signature: if function exists, check type. If not, create axiom. -/
-def SignatureSpec (env : Environment) (n : Name) (t : Expr) : Prop :=
-  match env.find? n with
-  | some ci => ci.type = t  -- type matches
-  | none => True  -- axiom will be created (can't express env mutation in Prop)
+/-- Model of Signature: if function exists, check type matches.
+    If not, an axiom will be created (expressed as: the post-env has it). -/
+def SignatureSpec (envBefore envAfter : Environment) (n : Name) (t : Expr) : Prop :=
+  match envBefore.find? n with
+  | some ci => ci.type = t  -- existing function: type matches
+  | none =>
+    -- missing function: Signature creates an axiom
+    match envAfter.find? n with
+    | some (.axiomInfo val) => val.type = t
+    | _ => False
 
 -- ════════════════════════════════════════════════════════════
 -- § The evidence ordering invariant
 -- ════════════════════════════════════════════════════════════
 
 /-- THE key invariant: sorry presence distinguishes evidence levels.
-    This is what makes the whole manifest system meaningful. -/
+    For any name n with a companion n_proof (created by ProvenTheorem),
+    n has no sorry. For any name n with a companion n_test (created by
+    TestedConjecture), n has sorry. The evidence level is observable. -/
 def EvidenceOrderingInvariant (env : Environment) : Prop :=
-  ∀ (n : Name),
-  match env.find? n with
-  | some ci =>
-    let hasSorry := ci.getUsedConstantsAsSet.contains ``sorryAx
-    -- A name created by ProvenTheorem has no sorry
-    -- A name created by TestedConjecture has sorry
-    -- The macro keyword determines the sorry presence
-    True  -- (the full statement would need "created by" tracking)
-  | none => True
+  -- ProvenTheorem results have no sorry
+  (∀ (n : Name),
+    (env.find? (n.appendAfter "_proof")).isSome →
+    match env.find? n with
+    | some ci => LeanEnvironment.SorryFree ci
+    | none => True) ∧
+  -- TestedConjecture results have sorry
+  (∀ (n : Name),
+    (env.find? (n.appendAfter "_test")).isSome →
+    match env.find? n with
+    | some ci => LeanEnvironment.UsesSorry ci
+    | none => True)
 
 -- ════════════════════════════════════════════════════════════
 -- § Derivations: proofs that USE the Lean Environment claims

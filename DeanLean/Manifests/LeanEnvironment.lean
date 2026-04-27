@@ -128,13 +128,28 @@ UnprovenConjecture sorry_is_transitive :
 -- § CommandElabM: the monad
 -- ════════════════════════════════════════════════════════════
 
--- throwError in CommandElabM prevents subsequent env modifications
-UnprovenConjecture throwError_halts :
-    ∀ (env : Environment) (msg : String),
-    -- after throwError msg, the environment is unchanged from env
-    -- (no subsequent elabCommand effects are applied)
-    True -- can't fully express "subsequent actions don't run" without
-         -- a step-indexed execution model
+-- throwError prevents subsequent env modifications.
+-- This follows from Except.bind: error >>= f = error (by rfl).
+-- CommandElabM is built on EIO which extends Except.
+-- Therefore: if a macro calls throwError, bind short-circuits,
+-- and no subsequent elabCommand modifies the environment.
+
+-- This is PROVABLE (not an axiom about Leo's code):
+theorem error_bind_is_error_proof {α β ε : Type} (e : ε) (f : α → Except ε β) :
+    (Except.error e) >>= f = Except.error e := rfl
+
+ProvenTheorem error_bind_is_error :
+    ∀ {α β ε : Type} (e : ε) (f : α → Except ε β),
+    (Except.error e) >>= f = Except.error e
+
+-- The connection to CommandElabM: throwError produces Except.error,
+-- so by error_bind_is_error, subsequent actions don't execute.
+-- The env state is managed by StateRefT, which only commits on success.
+UnprovenConjecture throwError_preserves_env :
+    ∀ (envBefore envAfter : Environment),
+    -- If CommandElabM action resulted in error (threw)
+    -- then envAfter = envBefore (state not committed)
+    ∀ (n : Name), envBefore.find? n = envAfter.find? n
 
 -- getEnv returns the environment reflecting all prior mutations
 UnprovenConjecture getEnv_reflects_mutations :

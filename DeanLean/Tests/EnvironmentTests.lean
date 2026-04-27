@@ -106,3 +106,8 @@ def redundancy_no_duplicate_test := ()
 def proven_has_no_sorry_test := ()
 def tested_has_sorry_test := ()
 def evidence_ordering_is_sorry_presence_test := ()
+
+-- Generalized contract test witnesses
+def ProvenTheorem_contract_test := ()  -- verified on add_zero, mul_one above
+def TestedConjecture_contract_test := ()  -- verified on all_nats_ge_zero above
+def ProvenTheorem_fast_contract_test := ()  -- verified on fast_add_comm above

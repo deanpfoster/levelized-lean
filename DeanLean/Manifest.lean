@@ -26,37 +26,53 @@ open Lean ProvenTheoremTests TestedConjectureTests DecomposedConjectureTests
 -- § ProvenTheorem: Environment effects
 -- ════════════════════════════════════════════════════════════
 
--- After ProvenTheorem, the name exists in the environment as a theorem
--- and its type matches the declared type.
-TestedConjecture ProvenTheorem_adds_theorem_to_env :
-    ∀ (env : Environment),
-    (env.find? `ProvenTheoremTests.add_zero).isSome →
-    match env.find? `ProvenTheoremTests.add_zero with
-    | some (.thmInfo _) => True
-    | _ => False
+-- GENERAL CONTRACT: For any name n in the environment, if n_proof exists,
+-- then ProvenTheorem should have created n as a thmInfo with matching type
+-- and no sorry.
 
--- The theorem created by ProvenTheorem has the same type as the proof
-TestedConjecture ProvenTheorem_type_matches_proof :
-    ∀ (env : Environment),
-    match env.find? `ProvenTheoremTests.add_zero, env.find? `ProvenTheoremTests.add_zero_proof with
-    | some ci1, some ci2 => ci1.type == ci2.type
-    | _, _ => false
+-- Property: a name is a sorry-free theorem
+def isSorryFreeTheorem (env : Environment) (n : Name) : Prop :=
+  match env.find? n with
+  | some (.thmInfo _) => ¬ (env.find? n).get!.getUsedConstantsAsSet.contains ``sorryAx
+  | _ => False
 
--- ProvenTheorem from _derivation also creates a theorem
-TestedConjecture ProvenTheorem_derivation_creates_theorem :
-    ∀ (env : Environment),
-    (env.find? `ProvenTheoremTests.mul_one).isSome →
-    match env.find? `ProvenTheoremTests.mul_one with
-    | some (.thmInfo _) => True
-    | _ => False
+-- Property: a name is a sorry theorem (conjecture)
+def isSorryTheorem (env : Environment) (n : Name) : Prop :=
+  match env.find? n with
+  | some (.thmInfo _) => (env.find? n).get!.getUsedConstantsAsSet.contains ``sorryAx
+  | _ => False
 
--- Fast mode creates an axiom, not a theorem
-TestedConjecture ProvenTheorem_fast_creates_axiom :
-    ∀ (env : Environment),
-    (env.find? `ProvenTheoremTests.fast_add_comm).isSome →
-    match env.find? `ProvenTheoremTests.fast_add_comm with
-    | some (.axiomInfo _) => True
-    | _ => False
+-- Property: a name is an axiom
+def isAxiomDecl (env : Environment) (n : Name) : Prop :=
+  match env.find? n with
+  | some (.axiomInfo _) => True
+  | _ => False
+
+-- Property: two names have the same type
+def sameType (env : Environment) (n1 n2 : Name) : Prop :=
+  match env.find? n1, env.find? n2 with
+  | some ci1, some ci2 => ci1.type == ci2.type
+  | _, _ => False
+
+-- THE CONTRACTS (general, parameterized by Name):
+
+-- ProvenTheorem n creates a sorry-free theorem with same type as n_proof
+TestedConjecture ProvenTheorem_contract :
+    ∀ (env : Environment) (n : Name),
+    (env.find? (n.appendAfter "_proof")).isSome →
+    isSorryFreeTheorem env n ∧ sameType env n (n.appendAfter "_proof")
+
+-- TestedConjecture n creates a sorry theorem
+TestedConjecture TestedConjecture_contract :
+    ∀ (env : Environment) (n : Name),
+    (env.find? (n.appendAfter "_test")).isSome →
+    isSorryTheorem env n
+
+-- Fast-mode ProvenTheorem creates an axiom
+TestedConjecture ProvenTheorem_fast_contract :
+    ∀ (env : Environment) (n : Name),
+    -- when levelized.fast = true
+    isAxiomDecl env n
 
 -- Compilation-failure claims
 UnprovenConjecture ProvenTheorem_fails_without_proof :

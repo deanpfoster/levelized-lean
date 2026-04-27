@@ -94,9 +94,10 @@ def VerifyAxiomSpec (env : Environment) (n : Name) (t : Expr) : Prop :=
   (env.find? proofName).isSome ∨ (env.find? derivName).isSome
 
 /-- Wrap: creates a noncomputable def aliasing another name -/
+-- Wrap: creates a def that references the target
 def WrapSpec (envAfter : Environment) (n : Name) (target : Name) : Prop :=
   match envAfter.find? n with
-  | some (.defnInfo _) => True  -- n exists as a def
+  | some ci => ci.getUsedConstantsAsSet.contains target  -- n references target
   | _ => False
 
 -- ════════════════════════════════════════════════════════════

@@ -2,8 +2,9 @@
 # What Ordering.lean would look like in traditional Lean style
 
 This file is NOT part of the build. It's a demonstration of how the same
-content would appear without levelized lean conventions — everything in
-one file, definitions interleaved with proofs, no header separation.
+content would appear without the Lean Manifests conventions — everything
+in one file, definitions interleaved with proofs, no manifest/proof
+separation.
 
 Compare with our 4-file version:
   - Ordering.lean (header)       — 144 lines, what's true
@@ -118,7 +119,7 @@ instance : MyStrongOrd Nat where
 -- THE PROBLEM: A reader (human or LLM) wanting to know
 -- "what does this module guarantee?" must read ALL of the above.
 --
--- In levelized lean, they read ONLY the header:
+-- In the Lean Manifests layout, they read ONLY the manifest:
 --
 --   ProvenTheorem strongCmp_refl : ∀ (a : T), strongCmp a a = .eq
 --   ProvenTheorem strongCmp_flip : ∀ (a b : T), (strongCmp a b).flip = strongCmp b a

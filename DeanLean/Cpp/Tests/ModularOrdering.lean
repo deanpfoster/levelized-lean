@@ -95,7 +95,7 @@ namespace ModularOrdering.ReExport
 -- export ModularOrdering.Theorems (cmp_gt_trans cmp_trichotomy cmp_lt_iff_gt)
 
 -- This works! A consumer imports Ordering.lean and gets a clean namespace.
--- So what's STILL missing compared to levelized lean?
+-- So what's STILL missing compared to Lean Manifests?
 
 end ModularOrdering.ReExport
 
@@ -123,7 +123,7 @@ end ModularOrdering.ReExport
 --
 --    There is NO WAY for a reader to see which theorems are proven
 --    and which are sorry without opening the theorem file.
---    In levelized lean:
+--    In Lean Manifests:
 --
 --      ProvenTheorem cmp_gt_trans : ...        -- proven
 --      ProvenTheorem cmp_trichotomy : ...      -- proven
@@ -142,7 +142,7 @@ end ModularOrdering.ReExport
 --      $ grep "sorry" Ordering/Theorems.lean
 --      -- returns sorry count, but no granularity
 --
---    Levelized lean:
+--    Lean Manifests:
 --      $ grep "ProvenTheorem" Ordering.lean | wc -l     → 20 proven
 --      $ grep "TestedConjecture" Ordering.lean | wc -l  → 4 tested
 --      $ grep "UnprovenConjecture" Ordering.lean | wc -l → 0 unproven
@@ -155,7 +155,7 @@ end ModularOrdering.ReExport
 -- 5. CONVENTION ENFORCEMENT
 --    Nothing in the module system prevents someone from putting a proof
 --    in the Defs file, or a definition in the Theorems file, or skipping
---    the re-export entirely. Levelized lean macros ENFORCE the convention:
+--    the re-export entirely. Lean Manifests macros ENFORCE the convention:
 --    - `Signature` checks the function exists and is total
 --    - `ProvenTheorem` checks the proof exists
 --    - `TestedConjecture` checks the test witness exists
@@ -176,6 +176,6 @@ end ModularOrdering.ReExport
 -- The analogy: interfaces in Java vs duck typing in Python.
 -- Both let you separate API from implementation. But interfaces
 -- are compiler-checked — you can't claim to implement Comparable
--- without actually providing compareTo(). Levelized lean macros
+-- without actually providing compareTo(). Lean Manifests macros
 -- are that compiler check for theorem-proving conventions.
 -- ═══════════════════════════════════════════════════════════════

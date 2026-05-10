@@ -1,6 +1,6 @@
 # C++ Standard Library Formalization in Lean 4
 
-This project formalizes the C++ standard library (N4950) using Levelized Lean conventions.
+This project formalizes the C++ standard library (N4950) using Lean Manifests conventions.
 
 ## Project Structure
 

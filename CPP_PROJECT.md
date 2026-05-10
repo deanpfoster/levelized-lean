@@ -1,13 +1,13 @@
 # Formalizing the C++ Standard Library in Lean 4
 
-A case study in applying Levelized Lean to a large-scale formalization project.
+A case study in applying Lean Manifests to a large-scale formalization project.
 
 ## Goal
 
 Convert the C++ standard library specification (N4950, ~1,000 pages of
 library content) into machine-checked Lean 4 theorems. The theorems
 replace English prose with compiler-verified claims. The proofs and code
-are second-class — what matters is the header: what's true, and how
+are second-class — what matters is the manifest: what's true, and how
 confident we are.
 
 ## What We Found
@@ -76,7 +76,7 @@ conflicts. The only shared file is the root import file (DeanLean.lean),
 and edits to it are additive (each agent appends one import line).
 
 We ran 3 agents in parallel across 3 rounds (9 total) with zero merge
-conflicts. This is a direct consequence of the levelized file structure.
+conflicts. This is a direct consequence of the manifest file structure.
 
 ### The evidence hierarchy: where are the sorry's?
 
@@ -160,7 +160,7 @@ exists; `TestedConjecture` still requires `_test`. The evidence
 hierarchy is enforced even in a single file. Good for exploration
 and rapid iteration. Start here.
 
-### Stage 2: Separated (conventional levelized lean)
+### Stage 2: Separated (conventional Lean Manifests)
 
 ```
 Sort.lean           ← header: Signature + ProvenTheorem + TestedConjecture
@@ -307,8 +307,8 @@ the highest-leverage work in a formalization project.
    in the header. Internal lemmas (stepping stones to the public results)
    stay in Proofs/. A 14-theorem module might have only 7 public theorems.
 
-5. **Parallel agents work when the architecture is right**. Levelized file
-   structure enables embarrassingly parallel development. Each module is
+5. **Parallel agents work when the architecture is right**. The manifest-based
+   file structure enables embarrassingly parallel development. Each module is
    independent until you choose to wire up cross-module dependencies.
 
 6. **Formalization finds real issues**. The eq-transitivity discovery

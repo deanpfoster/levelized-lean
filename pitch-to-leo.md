@@ -1,7 +1,7 @@
-# Physical Design for Lean 4: Evidence Levels and Header Files
+# Lean Manifests: Evidence Levels with Teeth
 
 **To:** Leo de Moura & the Lean Core Team  
-**Subject:** Complementing `module` with evidence-level headers for readability and AI
+**Subject:** Complementing `module` with manifest macros that make evidence levels first-class and compiler-enforced
 
 ## 1. Acknowledgment: `module` Already Solves the Cascade
 
@@ -74,25 +74,28 @@ without modifying the compiler.
 
 ### B. Readability: 77% Line Reduction
 
-CSLib's 20,837 lines of source reduce to 4,173 lines of headers + vocabulary.
-A reader (human or LLM) understands the entire library API without
-seeing a single proof body.
+CSLib's 20,837 lines of source reduce to 4,173 lines of manifest +
+vocabulary. A reader (human or LLM) understands the entire library
+API without seeing a single proof body.
 
-The header contains:
-- **Vocabulary**: definitions that appear in theorem types
-- **Theorem signatures**: with evidence level
+The manifest contains:
+- **Theorem signatures**: each carrying an evidence level
 - **Nothing else**: no proof bodies, no tactic blocks, no internal lemmas
 
+Vocabulary — the types and predicates that appear in theorem
+signatures — lives in a sibling `Defs/` directory, also public. Code,
+proofs, and tests are hidden.
+
 For AI verification pipelines, this is the key win. An LLM using the
-library needs theorem signatures, not proof bodies. Our benchmark shows
-42% fewer tokens for identical comprehension accuracy.
+library needs theorem signatures, not proof bodies. Our benchmark
+shows 42% fewer tokens for identical comprehension accuracy.
 
 ### C. Vocabulary Enforcement via `Defs/`
 
-A `Defs/` directory holds definitions that appear in theorem types.
-The header imports `Defs/` but NOT `Code/` — so theorems in the header
-can only reference vocabulary definitions. This is enforced by Lean's
-import system, not custom macros.
+A `Defs/` directory holds the vocabulary — definitions that appear in
+theorem types. The manifest imports `Defs/` but NOT `Code/`, so
+theorems in the manifest can only reference vocabulary definitions.
+This is enforced by Lean's import system, not custom macros.
 
 This prevents internal helpers from leaking into the public API.
 
@@ -107,26 +110,30 @@ and requires every piece to have at least a test witness.
 
 Working prototype at `lean4.ai/levelized-lean.html`:
 
-- Full CSLib headerization: 459 compiler-verified theorem entries
+- Full CSLib manifests: 459 compiler-verified theorem entries
 - Full CSLib intrusive refactor: 121 Defs files, all building
 - C++ standard library formalization: 13 modules, 226 theorems
 - Verified interval arithmetic: 34 proven containment theorems
 - Happens-before memory model: 22 proven concurrency theorems
-- Benchmark: headers give 42% token savings for LLM comprehension
-- Fast mode toggle: `set_option levelized.fast true` for axiom-based headers
+- Benchmark: manifests give 42% token savings for LLM comprehension
+- Fast mode toggle: `set_option levelized.fast true` for axiom-based manifests
+- **Teeth** (2026): `@[manifest_entry]` enforcement makes the trust
+  report complete by construction — `DerivedConjecture` refuses to
+  compile if any sorry dep is a stray, not a declared manifest entry
 
 ## 4. For Mathlib
 
 The `module` keyword's cascade prevention presumably extends to Mathlib
-once Mathlib adopts `module`. The evidence hierarchy and header files
-would complement this:
+once Mathlib adopts `module`. Lean Manifests would complement this:
 
 - **Progress tracking**: `grep DecomposedConjecture *.lean` instantly shows
   partially-proven theorems and what's blocking them
-- **LLM access**: Mathlib headers would give AI agents the full API in
+- **LLM access**: Mathlib manifests would give AI agents the full API in
   ~16K lines instead of ~200K+ lines of proof-heavy source
 - **Contribution guidance**: new contributors see which conjectures are
   closest to promotion (highest fraction of proven lemmas)
+- **Trust reports**: every `DerivedConjecture` in Mathlib would emit a
+  complete, enforced list of its sorry dependencies
 
 ## 5. O(1) Parallel Verification
 
@@ -136,10 +143,10 @@ then all levels can be compiled simultaneously. Does Lake already exploit
 this? If so, the parallelization win from our original pitch is also
 already solved.
 
-Our `FastHeader` (axiom-based headers) would still be useful for the
-extreme case: an LLM exploring proof space wants sub-second type-checking
-without waiting for ANY proof to compile. But for normal development,
-`module` + Lake parallelism may be sufficient.
+Our `FastHeader` (axiom-based manifest entries) would still be useful
+for the extreme case: an LLM exploring proof space wants sub-second
+type-checking without waiting for ANY proof to compile. But for normal
+development, `module` + Lake parallelism may be sufficient.
 
 ## 6. The Ask
 
@@ -149,4 +156,4 @@ asking for compiler changes — `module` already solved the hard part.
 We'd welcome feedback on:
 1. Would the Lean community adopt evidence-level macros?
 2. Should vocabulary enforcement (`Defs/`) be a convention or tooling?
-3. Is there interest in header generation for Mathlib?
+3. Is there interest in manifest generation for Mathlib?

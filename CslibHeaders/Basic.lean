@@ -1,6 +1,6 @@
 import Lean
 
-/-! # Levelized Lean macros for CSLib headers -/
+/-! # Lean Manifests macros for CSLib -/
 
 open Lean Elab Command in
 elab "ProvenTheorem " n:ident " : " t:term : command => do

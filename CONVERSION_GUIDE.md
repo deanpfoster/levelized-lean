@@ -1,14 +1,17 @@
-# Guide: Converting a Lean Library to Levelized Headers
+# Guide: Adding a Manifest to a Lean Library
 
-This guide tells you how to create non-intrusive header files for an
-existing Lean library. The original code is never modified.
+This guide tells you how to create a non-intrusive manifest for an
+existing Lean library — following the Lean Manifests discipline.
+The original code is never modified.
 
 ## Prerequisites
 
-Read https://lean4.ai/levelized-lean.html for the full architecture.
-The key concepts: headers separate WHAT from WHY, evidence levels
-(ProvenTheorem/TestedConjecture/DerivedConjecture/UnprovenConjecture),
-and the Defs/Proofs/Header file structure.
+Read https://lean4.ai/levelized-lean.html for the full architecture
+(the URL still uses the old path; the project is now called Lean
+Manifests). Key concepts: manifests separate claims from evidence,
+five evidence levels (ProvenTheorem / DerivedConjecture /
+DecomposedConjecture / TestedConjecture / UnprovenConjecture), and
+the `Defs/` + `Proofs/` + manifest file structure.
 
 ## The Three Files You Create Per Module
 
@@ -46,9 +49,9 @@ noncomputable def theorem3_proof := @theorem3
 ```
 
 One line per theorem. Each creates a `_proof` alias that
-`ProvenTheorem` in the header will find.
+`ProvenTheorem` in the manifest will find.
 
-### 3. Foo/Bar.lean — Header (the spec)
+### 3. Foo/Bar.lean — Manifest (the claims)
 
 ```lean
 import LibHeaders.Basic
@@ -88,8 +91,8 @@ noncomputable def foo_proof := @Lib.Foo.Bar.foo
 ```
 This avoids implicit argument resolution issues.
 
-### Use `open` liberally in headers
-Headers should be readable. Open the relevant namespaces so types
+### Use `open` liberally in manifests
+Manifests should be readable. Open the relevant namespaces so types
 are concise:
 ```lean
 open Lib.Foo.Bar  -- now IsSorted not Lib.Foo.Bar.IsSorted
@@ -106,7 +109,7 @@ Don't create ProvenTheorem entries for them.
 ### Public vs Internal
 A theorem is PUBLIC if a consumer would invoke it directly.
 A theorem is INTERNAL if it's only used as a stepping stone
-in other proofs. Only PUBLIC theorems go in the header.
+in other proofs. Only PUBLIC theorems go in the manifest.
 
 Rule of thumb: if the theorem appears in the module's docstring
 or "Main results" section, it's public.
@@ -117,7 +120,7 @@ or "Main results" section, it's public.
   (no intervening doc comments)
 - Lean 4.16: `noncomputable theorem` works fine
 
-### Testing your header
+### Testing your manifest
 After creating all three files:
 ```bash
 lake build LibHeaders.Foo.Bar
@@ -129,11 +132,11 @@ tells you which theorem's type doesn't match.
 
 - **Defs file**: ~1 line per vocabulary definition + imports
 - **Proofs bridge**: ~1 line per theorem + imports
-- **Header**: ~2 lines per public theorem + ~5 lines vocabulary comments
+- **Manifest**: ~2 lines per public theorem + ~5 lines vocabulary comments
 - **Total overhead**: ~30-50 lines per module
 
 A 200-line original file with 14 theorems → ~7 public theorems
-→ header of ~20 lines + Defs ~10 lines + Proofs ~10 lines = ~40 lines total.
+→ manifest of ~20 lines + Defs ~10 lines + Proofs ~10 lines = ~40 lines total.
 
 ## Workflow
 
@@ -142,6 +145,6 @@ A 200-line original file with 14 theorems → ~7 public theorems
 3. Identify vocabulary (types/defs that appear in theorem signatures)
 4. Create Defs/ with Vocabulary entries
 5. Create Proofs/ with _proof bridges
-6. Create header with ProvenTheorem entries
+6. Create manifest with ProvenTheorem entries
 7. `lake build` and fix type mismatches
 8. Repeat for next module

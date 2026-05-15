@@ -33,6 +33,23 @@ theorem TestedConjecture_is_correct_derivation :
   have := sorry_proof_detected          -- Leo: sorry proof has sorryAx
   sorry
 
+-- FailingConjecture: sorry thmInfo, requires tests with failures
+theorem FailingConjecture_is_correct_derivation :
+    ∀ (env : Environment) (n : Name) (t : Expr) (passed total : Nat),
+    FailingConjectureSpec env n t passed total := by
+  intro env n t passed total h_total h_failing
+  have := elab_theorem_creates_thmInfo
+  have := sorry_proof_detected
+  sorry
+
+-- Test macro: always emits a def
+theorem TestMacro_is_correct_derivation :
+    ∀ (env : Environment) (n : Name) (idx : Nat),
+    TestMacroSpec env n idx := by
+  intro env n idx
+  have := elab_theorem_creates_thmInfo
+  sorry
+
 -- UnprovenConjecture: sorry thmInfo, no preconditions
 theorem UnprovenConjecture_is_correct_derivation :
     ∀ (env : Environment) (n : Name) (t : Expr),

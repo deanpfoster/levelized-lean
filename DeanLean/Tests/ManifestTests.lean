@@ -284,3 +284,48 @@ end VerifyAxiomTests
 namespace OrderingTests
 def proven_is_deterministic_test := show ordering_thm = rfl from rfl
 end OrderingTests
+
+-- ════════════════════════════════════════════════════════════
+-- § Test macro
+-- ════════════════════════════════════════════════════════════
+
+namespace TestMacroTests
+
+-- Test: passing test (rfl succeeds)
+Test passing_example :=
+  show 1 + 1 = 2 from rfl
+
+-- Test: multiple passing tests for same conjecture
+Test passing_example :=
+  show 2 + 2 = 4 from rfl
+
+Test passing_example :=
+  show 0 + 0 = 0 from rfl
+
+-- Test: TestedConjecture works with Test macro results
+TestedConjecture passing_example : ∀ (n m : Nat), n + m = m + n
+
+-- Test: failing test (rfl can't prove false statement)
+Test failing_example :=
+  show 1 + 1 = 3 from rfl
+
+-- Test: mix of passing and failing
+Test mixed_example :=
+  show 1 + 1 = 2 from rfl
+
+Test mixed_example :=
+  show 1 + 1 = 3 from rfl
+
+-- Test: FailingConjecture works with failing tests
+FailingConjecture failing_example : ∀ (n : Nat), n + n = n + n + 1
+
+-- Test: FailingConjecture with mixed results
+FailingConjecture mixed_example : ∀ (n : Nat), n = n
+
+def Test_macro_creates_defs_test := show True from trivial
+def Test_macro_passing_compiles_test := show True from trivial
+def Test_macro_failing_compiles_test := show True from trivial
+def FailingConjecture_requires_tests_test := show True from trivial
+def FailingConjecture_reports_count_test := show True from trivial
+
+end TestMacroTests

@@ -1,3 +1,4 @@
+import DeanLean.Basic
 import DeanLean.Cpp.Code.Map
 
 /-! # Tests for C++ sorted associative containers (N4950 §24.4) -/
@@ -158,48 +159,37 @@ end Cpp.CppSet.Tests
 
 namespace Cpp
 
-/-- Map: find_insert_same_nat test witness -/
-def find_insert_same_nat_test :=
+Test find_insert_same_nat :=
   show ((Map.empty : Map Nat Nat).insert 3 30).find 3 = some 30 from rfl
 
-/-- Map: find_insert_other_nat test witness -/
-def find_insert_other_nat_test :=
+Test find_insert_other_nat :=
   show ((Map.empty : Map Nat Nat).insert 3 30).find 5 = none from rfl
 
-/-- Map: find_empty_nat test witness -/
-def find_empty_nat_test :=
+Test find_empty_nat :=
   show (Map.empty : Map Nat Nat).find 1 = none from rfl
 
-/-- Map: size_empty_nat test witness -/
-def size_empty_nat_test :=
+Test size_empty_nat :=
   show (Map.empty : Map Nat Nat).size = 0 from rfl
 
-/-- Map: erase_find_nat test witness -/
-def erase_find_nat_test :=
+Test erase_find_nat :=
   show (((Map.empty : Map Nat Nat).insert 3 30).erase 3).find 3 = none from rfl
 
-/-- Map: keys_sorted_nat test witness — keys are [1, 3, 5] which is sorted -/
-def keys_sorted_nat_test :=
+Test keys_sorted_nat :=
   show ((((Map.empty : Map Nat Nat).insert 5 50).insert 3 30).insert 1 10).keys = [1, 3, 5] from rfl
 
-/-- Set: contains_insert_nat test witness -/
-def contains_insert_nat_test :=
+Test contains_insert_nat :=
   show ((CppSet.empty : CppSet Nat).insert 3).contains 3 = true from rfl
 
-/-- Set: contains_erase_nat test witness -/
-def contains_erase_nat_test :=
+Test contains_erase_nat :=
   show (((CppSet.empty : CppSet Nat).insert 3).erase 3).contains 3 = false from rfl
 
-/-- Set: contains_insert_other_nat test witness -/
-def contains_insert_other_nat_test :=
+Test contains_insert_other_nat :=
   show ((CppSet.empty : CppSet Nat).insert 3).contains 5 = false from rfl
 
-/-- Map: insert_overwrite test witness -/
-def insert_overwrite_test :=
+Test insert_overwrite :=
   show (((Map.empty : Map Nat Nat).insert 3 30).insert 3 99).find 3 = some 99 from rfl
 
-/-- Set: set_duplicate_insert test witness -/
-def set_duplicate_insert_test :=
+Test set_duplicate_insert :=
   show (((CppSet.empty : CppSet Nat).insert 3).insert 3).size = 1 from rfl
 
 end Cpp

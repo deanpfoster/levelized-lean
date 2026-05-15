@@ -1,3 +1,4 @@
+import DeanLean.Basic
 import DeanLean.Cpp.Code.Concurrency
 
 /-! # Tests for C++ happens-before memory model (N4950 §33) -/
@@ -145,32 +146,25 @@ end Cpp.Concurrency.Tests
 
 namespace Cpp.Concurrency
 
-/-- Events with same fields are equal -/
-def event_equality_test :=
+Test event_equality :=
   show Event.mk 0 0 = Event.mk 0 0 from rfl
 
-/-- Events with different seqNo are distinguishable -/
-def event_seqno_matters_test :=
+Test event_seqno_matters :=
   show (Event.mk 0 0 == Event.mk 0 1) = false from rfl
 
-/-- Events with different threadId are distinguishable -/
-def event_thread_matters_test :=
+Test event_thread_matters :=
   show (Event.mk 0 0 == Event.mk 1 0) = false from rfl
 
-/-- AccessKind read and write are distinct -/
-def accessKind_read_neq_write_test :=
+Test accessKind_read_neq_write :=
   show (AccessKind.read == AccessKind.write) = false from rfl
 
-/-- MemoryOrder relaxed is not acquire -/
-def memoryOrder_values_distinct_test :=
+Test memoryOrder_values_distinct :=
   show (MemoryOrder.relaxed == MemoryOrder.acquire) = false from rfl
 
-/-- Read access has kind read -/
-def read_access_has_read_kind_test :=
+Test read_access_has_read_kind :=
   show (MemoryAccess.mk (Event.mk 0 0) 42 .read).kind = .read from rfl
 
-/-- Write access has kind write -/
-def write_access_has_write_kind_test :=
+Test write_access_has_write_kind :=
   show (MemoryAccess.mk (Event.mk 0 0) 42 .write).kind = .write from rfl
 
 end Cpp.Concurrency

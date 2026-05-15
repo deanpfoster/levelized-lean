@@ -23,7 +23,7 @@ def ProvenTheoremSpec (env : Environment) (n : Name) (t : Expr) : Prop :=
     | .thmInfo val => val.type = t ∧ SorryFree ci
     | _ => False
 
-/-- TestedConjecture: creates sorry thmInfo, requires _test -/
+/-- TestedConjecture: creates sorry thmInfo, requires _test or all Tests passing -/
 def TestedConjectureSpec (env : Environment) (n : Name) (t : Expr) : Prop :=
   let testName := n.appendAfter "_test"
   (env.find? testName).isSome →
@@ -31,6 +31,21 @@ def TestedConjectureSpec (env : Environment) (n : Name) (t : Expr) : Prop :=
     match ci with
     | .thmInfo val => val.type = t ∧ UsesSorry ci
     | _ => False
+
+/-- FailingConjecture: creates sorry thmInfo, requires tests with at least one failing -/
+def FailingConjectureSpec (env : Environment) (n : Name) (t : Expr)
+    (passed total : Nat) : Prop :=
+  total > 0 →
+  passed < total →
+  ∃ ci : ConstantInfo,
+    match ci with
+    | .thmInfo val => val.type = t ∧ UsesSorry ci
+    | _ => False
+
+/-- Test macro: tries elaboration, records pass/fail, always emits a def -/
+def TestMacroSpec (env : Environment) (n : Name) (idx : Nat) : Prop :=
+  let defName := n.appendAfter s!"_test_{idx}"
+  (env.find? defName).isSome
 
 /-- UnprovenConjecture: creates sorry thmInfo, no requirements -/
 def UnprovenConjectureSpec (env : Environment) (n : Name) (t : Expr) : Prop :=

@@ -1,3 +1,4 @@
+import DeanLean.Basic
 import DeanLean.Cpp.Code.Sort
 import DeanLean.Cpp.Proofs.Sort
 
@@ -52,20 +53,16 @@ end Cpp.Sort.Tests
 
 namespace Cpp.Sort
 
-/-- Test: insertionSort produces sorted output on a concrete list. -/
-def insertionSort_sorted_test :=
+Test insertionSort_sorted :=
   show isSorted (insertionSort [5, 3, 8, 1, 2]) = true from rfl
 
-/-- Test: insertionSort preserves length on a concrete list. -/
-def insertionSort_length_test :=
+Test insertionSort_length :=
   show (insertionSort [5, 3, 8, 1, 2]).length = 5 from rfl
 
-/-- Test: insertionSort is a permutation (same elements) on a concrete list. -/
-def insertionSort_perm_test :=
+Test insertionSort_perm :=
   show insertionSort [3, 1, 2] = [1, 2, 3] from rfl
 
-/-- Test: isSorted agrees with IsSorted on a concrete sorted list. -/
-def isSorted_iff_IsSorted_test :=
+Test isSorted_iff_IsSorted :=
   show isSorted [1, 2, 3] = true from rfl
 
 end Cpp.Sort

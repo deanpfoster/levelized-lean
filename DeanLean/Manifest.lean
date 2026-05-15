@@ -22,19 +22,29 @@ import DeanLean.Manifests.MacroContracts
 
   ## Evidence Hierarchy
 
-  ○ UnprovenConjecture    — sorry IS the theorem
-  ◐ TestedConjecture      — sorry is the ∀ (witness required)
+  ○ UnprovenConjecture    — sorry IS the theorem (TODO: close eventually)
+  ◆ ManifestAxiom         — sorry IS the theorem (permanent env assumption, OK)
+  ✗ FailingConjecture     — tests exist, some fail (known broken)
+  ◐ TestedConjecture      — sorry is the ∀ (all tests pass)
   ◑ DecomposedConjecture  — sorry is in the lemmas (all tested)
   ◕ DerivedConjecture     — sorry is in other modules
   ● ProvenTheorem         — no sorry anywhere
+
+  ## Test macro
+
+  `Test foo := show <expr> = <val> from rfl` — tries elaboration at compile time.
+  If rfl succeeds, records pass. If it fails, records fail (compilation continues).
+  Multiple Tests per name accumulate into pass/total counts.
+  TestedConjecture requires all pass; FailingConjecture requires at least one fail.
+  DerivedConjecture/DecomposedConjecture do blame analysis when tests fail.
 
   ## Dependency chain
 
   Leo's Lean (200K+ lines)
     ↑ 15 UnprovenConjectures + 1 ProvenTheorem (LeanEnvironment.lean)
-  Our macros (263 lines)
+  Our macros (350 lines)
     ↑ 3 DerivedConjectures depending on 5 of Leo's claims (MacroContracts.lean)
   Library manifests (CSLib, C++, Interval, etc.)
-    ↑ ProvenTheorem / TestedConjecture / etc.
+    ↑ ProvenTheorem / TestedConjecture / FailingConjecture / etc.
   Consumers
 -/

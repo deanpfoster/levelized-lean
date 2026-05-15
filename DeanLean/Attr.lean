@@ -33,3 +33,22 @@ initialize manifestEntryAttr : TagAttribute ←
 /-- True iff `n` is tagged with `@[manifest_entry]`. -/
 def hasManifestEntryAttr (env : Environment) (n : Name) : Bool :=
   manifestEntryAttr.hasTag env n
+
+/-- The `@[manifest_axiom]` attribute marks a declaration as a permanent
+    environmental assumption — an axiom we explicitly accept and don't
+    expect to ever prove (OS behavior, network reality, hardware semantics,
+    source-structure claims).
+
+    Contrast with plain `@[manifest_entry]` UnprovenConjectures, which are
+    holes we intend to close eventually.
+
+    In a trust report:
+    - ManifestAxiom deps → "fully attested" (as proven as it can be)
+    - UnprovenConjecture deps → "partial" (has TODOs) -/
+initialize manifestAxiomAttr : TagAttribute ←
+  registerTagAttribute `manifest_axiom
+    "marks a declaration as a permanent environmental assumption (ManifestAxiom)"
+
+/-- True iff `n` is tagged with `@[manifest_axiom]`. -/
+def hasManifestAxiomAttr (env : Environment) (n : Name) : Bool :=
+  manifestAxiomAttr.hasTag env n

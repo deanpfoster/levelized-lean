@@ -111,3 +111,31 @@ def evidence_ordering_is_sorry_presence_test := ()
 def ProvenTheorem_contract_test := ()  -- verified on add_zero, mul_one above
 def TestedConjecture_contract_test := ()  -- verified on all_nats_ge_zero above
 def ProvenTheorem_fast_contract_test := ()  -- verified on fast_add_comm above
+
+-- ════════════════════════════════════════════════════════════
+-- § Test macro environment effects
+-- ════════════════════════════════════════════════════════════
+
+#check_is_def TestMacroTests.passing_example_test_1
+#check_is_def TestMacroTests.passing_example_test_2
+#check_is_def TestMacroTests.passing_example_test_3
+#check_no_sorry TestMacroTests.passing_example_test_1
+
+-- Failing test emits a sorry'd def
+#check_is_def TestMacroTests.failing_example_test_1
+#check_has_sorry TestMacroTests.failing_example_test_1
+
+-- Mixed: first passes, second fails
+#check_is_def TestMacroTests.mixed_example_test_1
+#check_no_sorry TestMacroTests.mixed_example_test_1
+#check_is_def TestMacroTests.mixed_example_test_2
+#check_has_sorry TestMacroTests.mixed_example_test_2
+
+-- ════════════════════════════════════════════════════════════
+-- § FailingConjecture environment effects
+-- ════════════════════════════════════════════════════════════
+
+#check_is_theorem TestMacroTests.failing_example
+#check_has_sorry TestMacroTests.failing_example
+#check_is_theorem TestMacroTests.mixed_example
+#check_has_sorry TestMacroTests.mixed_example

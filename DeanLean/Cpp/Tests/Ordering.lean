@@ -1,3 +1,4 @@
+import DeanLean.Basic
 import DeanLean.Cpp.Code.Ordering
 
 /-! # Tests for C++ comparison/ordering types (N4950 §17.11) -/
@@ -171,49 +172,38 @@ end Cpp.Ordering.Tests
 
 namespace Cpp
 
-/-- Nat reflexivity test witness -/
-def strongCmp_refl_nat_test :=
+Test strongCmp_refl_nat :=
   show StrongOrd.strongCmp 42 42 = Ordering.eq from rfl
 
-/-- Nat flip consistency test witness -/
-def strongCmp_flip_nat_test :=
+Test strongCmp_flip_nat :=
   show (StrongOrd.strongCmp 3 7).flip = StrongOrd.strongCmp 7 3 from rfl
 
-/-- Nat lt transitivity test witness -/
-def strongCmp_lt_trans_nat_test :=
+Test strongCmp_lt_trans_nat :=
   show StrongOrd.strongCmp 1 3 = Ordering.lt from rfl
 
-/-- Int reflexivity test witness -/
-def strongCmp_refl_int_test :=
+Test strongCmp_refl_int :=
   show StrongOrd.strongCmp (-5 : Int) (-5) = Ordering.eq from rfl
 
-/-- Int flip consistency test witness -/
-def strongCmp_flip_int_test :=
+Test strongCmp_flip_int :=
   show (StrongOrd.strongCmp (1 : Int) (2 : Int)).flip = StrongOrd.strongCmp 2 1 from rfl
 
-/-- Pair reflexivity test witness -/
-def strongCmp_refl_pair_test :=
+Test strongCmp_refl_pair :=
   show StrongOrd.strongCmp (Pair.make 1 2) (Pair.make 1 2) = Ordering.eq from rfl
 
-/-- Pair flip consistency test witness -/
-def strongCmp_flip_pair_test :=
+Test strongCmp_flip_pair :=
   show (StrongOrd.strongCmp (Pair.make 1 2) (Pair.make 1 3)).flip =
        StrongOrd.strongCmp (Pair.make 1 3) (Pair.make 1 2) from rfl
 
-/-- Pair lt transitivity test witness -/
-def strongCmp_lt_trans_pair_test :=
+Test strongCmp_lt_trans_pair :=
   show StrongOrd.strongCmp (Pair.make 1 2) (Pair.make 2 1) = Ordering.lt from rfl
 
-/-- Flip involution test witness -/
-def flip_involution_test :=
+Test flip_involution :=
   show Ordering.lt.flip.flip = Ordering.lt from rfl
 
-/-- Ordering toWeak preserves lt test witness -/
-def toWeak_preserves_test :=
+Test toWeak_preserves :=
   show Ordering.lt.toWeak = WeakOrdering.lt from rfl
 
-/-- Ordering toPartial preserves lt test witness -/
-def toPartial_preserves_test :=
+Test toPartial_preserves :=
   show Ordering.lt.toPartial = PartialOrdering.lt from rfl
 
 end Cpp

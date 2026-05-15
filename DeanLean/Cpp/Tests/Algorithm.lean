@@ -1,3 +1,4 @@
+import DeanLean.Basic
 import DeanLean.Cpp.Code.Algorithm
 import DeanLean.Cpp.Proofs.Algorithm
 
@@ -81,57 +82,44 @@ end Cpp.Algorithm.Tests
 
 namespace Cpp
 
-/-- Test: `cppMin` is commutative on concrete Nat values. -/
-def cppMin_comm_test :=
+Test cppMin_comm :=
   show cppMin 3 5 = cppMin 5 3 from rfl
 
-/-- Test: `cppMax` is commutative on concrete Nat values. -/
-def cppMax_comm_test :=
+Test cppMax_comm :=
   show cppMax 3 5 = cppMax 5 3 from rfl
 
-/-- Test: `cppClamp` keeps value in range on concrete values. -/
-def cppClamp_in_range_test :=
+Test cppClamp_in_range :=
   show cppClamp 2 3 7 = 3 ∧ cppClamp 5 3 7 = 5 ∧ cppClamp 9 3 7 = 7 from
     ⟨rfl, rfl, rfl⟩
 
-/-- Test: `isSorted` correctly identifies a sorted list. -/
-def isSorted_sorted_test :=
+Test isSorted_sorted :=
   show isSorted [1, 2, 3, 4, 5] = true from rfl
 
-/-- Test: `isSorted` correctly identifies an unsorted list. -/
-def isSorted_unsorted_test :=
+Test isSorted_unsorted :=
   show isSorted [1, 3, 2, 4] = false from rfl
 
-/-- Test: `minElement` finds the minimum in a list. -/
-def minElement_finds_min_test :=
+Test minElement_finds_min :=
   show minElement [3, 1, 4, 1, 5] = 1 from rfl
 
-/-- Test: `maxElement` finds the maximum in a list. -/
-def maxElement_finds_max_test :=
+Test maxElement_finds_max :=
   show maxElement [3, 1, 4, 1, 5] = 5 from rfl
 
-/-- Test: `cppMin` self-identity on a concrete value. -/
-def cppMin_self_test :=
+Test cppMin_self :=
   show cppMin 42 42 = 42 from rfl
 
-/-- Test: `cppMax` self-identity on a concrete value. -/
-def cppMax_self_test :=
+Test cppMax_self :=
   show cppMax 42 42 = 42 from rfl
 
-/-- Test: `cppClamp` at boundary values. -/
-def cppClamp_boundary_test :=
+Test cppClamp_boundary :=
   show cppClamp 3 3 7 = 3 ∧ cppClamp 7 3 7 = 7 from ⟨rfl, rfl⟩
 
-/-- Test: `cppMin` is commutative on concrete Nat values (for TestedConjecture). -/
-def cppMin_comm_nat_test :=
+Test cppMin_comm_nat :=
   show cppMin 3 5 = cppMin 5 3 from rfl
 
-/-- Test: `cppMax` is commutative on concrete Nat values (for TestedConjecture). -/
-def cppMax_comm_nat_test :=
+Test cppMax_comm_nat :=
   show cppMax 3 5 = cppMax 5 3 from rfl
 
-/-- Test: `cppClamp` in-range on concrete Nat values (for TestedConjecture). -/
-def cppClamp_in_range_nat_test :=
+Test cppClamp_in_range_nat :=
   show cppClamp 2 3 7 = 3 ∧ cppClamp 5 3 7 = 5 ∧ cppClamp 9 3 7 = 7 from
     ⟨rfl, rfl, rfl⟩
 

@@ -1,3 +1,4 @@
+import DeanLean.Basic
 import DeanLean.Cpp.Code.Variant
 
 namespace Cpp.Variant2.Tests
@@ -94,19 +95,19 @@ end Cpp.Variant3.Tests
 
 namespace Cpp.Variant2
 
-def index_determines_alternative_test :=
+Test index_determines_alternative :=
   show (Variant2.first 42 : Variant2 Nat String).holds_alternative ⟨0, by omega⟩
     = ((Variant2.first 42 : Variant2 Nat String).index == ⟨0, by omega⟩) from rfl
 
-def exactly_one_alternative_test :=
+Test exactly_one_alternative :=
   show (Variant2.first 42 : Variant2 Nat String).holds_alternative ⟨0, by omega⟩
     != (Variant2.first 42 : Variant2 Nat String).holds_alternative ⟨1, by omega⟩ from rfl
 
-def different_constructors_different_index_test :=
+Test different_constructors_different_index :=
   show (Variant2.first 42 : Variant2 Nat String).index
     ≠ (Variant2.second "hi" : Variant2 Nat String).index from by decide
 
-def visit_determines_equality_test :=
+Test visit_determines_equality :=
   show (Variant2.first 42 : Variant2 Nat String).visit toString id
     = (Variant2.first 42 : Variant2 Nat String).visit toString id from rfl
 
@@ -114,11 +115,11 @@ end Cpp.Variant2
 
 namespace Cpp.Variant3
 
-def index_determines_alternative_test :=
+Test index_determines_alternative :=
   show (Variant3.first 42 : Variant3 Nat String Bool).holds_alternative ⟨0, by omega⟩
     = ((Variant3.first 42 : Variant3 Nat String Bool).index == ⟨0, by omega⟩) from rfl
 
-def exactly_one_alternative_test :=
+Test exactly_one_alternative :=
   show ((Variant3.first 42 : Variant3 Nat String Bool).holds_alternative ⟨0, by omega⟩).toNat +
     ((Variant3.first 42 : Variant3 Nat String Bool).holds_alternative ⟨1, by omega⟩).toNat +
     ((Variant3.first 42 : Variant3 Nat String Bool).holds_alternative ⟨2, by omega⟩).toNat = 1 from rfl

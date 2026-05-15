@@ -1,3 +1,4 @@
+import DeanLean.Basic
 import DeanLean.Cpp.Code.Expected
 
 namespace Cpp.Expected.Tests
@@ -112,28 +113,28 @@ namespace Cpp.Expected
 
 -- Monad law test witnesses
 
-def monad_left_identity_test :=
+Test monad_left_identity :=
   show (pure 5 : Expected String Nat) >>= Expected.ok = Expected.ok 5 from rfl
 
-def monad_right_identity_test :=
+Test monad_right_identity :=
   show (Expected.ok 5 : Expected String Nat) >>= (pure · : Nat → Expected String Nat) = Expected.ok 5 from rfl
 
-def monad_associativity_test :=
+Test monad_associativity :=
   show ((Expected.ok 3 : Expected String Nat) >>= (fun n => Expected.ok (n + 1))) >>= (fun n => Expected.ok (n * 2))
     = (Expected.ok 3 : Expected String Nat) >>= (fun n => (fun n => Expected.ok (n + 1)) n >>= (fun n => Expected.ok (n * 2))) from rfl
 
 -- Functor law test witnesses
 
-def transform_compose_test :=
+Test transform_compose :=
   show ((Expected.ok 3 : Expected String Nat).transform (· + 1)).transform (· * 2)
     = (Expected.ok 3 : Expected String Nat).transform ((· * 2) ∘ (· + 1)) from rfl
 
-def transform_id_test :=
+Test transform_id :=
   show (Expected.ok 5 : Expected String Nat).transform id = Expected.ok 5 from rfl
 
 -- or_else / and_then interaction test witness
 
-def or_else_and_then_unexpected_test :=
+Test or_else_and_then_unexpected :=
   show ((Expected.unexpected "e" : Expected String Nat).or_else (fun _ => Expected.ok 5)).and_then (fun n => Expected.ok (n + 1))
     = ((fun _ => Expected.ok (E := String) (T := Nat) 5) "e").and_then (fun n => Expected.ok (n + 1)) from rfl
 

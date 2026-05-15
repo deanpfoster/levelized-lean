@@ -24,6 +24,14 @@ DerivedConjecture TestedConjecture_is_correct :
     ∀ (env : Environment) (n : Name) (t : Expr),
     TestedConjectureSpec env n t
 
+DerivedConjecture FailingConjecture_is_correct :
+    ∀ (env : Environment) (n : Name) (t : Expr) (passed total : Nat),
+    FailingConjectureSpec env n t passed total
+
+DerivedConjecture TestMacro_is_correct :
+    ∀ (env : Environment) (n : Name) (idx : Nat),
+    TestMacroSpec env n idx
+
 DerivedConjecture UnprovenConjecture_is_correct :
     ∀ (env : Environment) (n : Name) (t : Expr),
     UnprovenConjectureSpec env n t

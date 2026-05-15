@@ -212,3 +212,47 @@ A metaprogram (`Scripts/GenerateTheoremIndex.lean` in l3m) walks all tagged cons
 ### Honest assessment
 
 The attribute enables consultation. It doesn't enforce it. Whether developers actually check before modifying is a workflow/habit question. The build catches you regardless. The attribute just makes it cheaper to check first.
+
+## DeanLean.IndexGen — Reusable Theorem Index Generator
+
+A generic utility for any project using lean-manifests to generate a function↔theorem cross-reference.
+
+### How to invoke from any project
+
+```lean
+-- Scripts/GenerateTheoremIndex.lean
+import DeanLean.IndexGen
+import MyProject  -- your root import
+
+def main : IO Unit := do
+  DeanLean.IndexGen.run "MyProject" "docs/theorem-index.md" #[{ module := `MyProject }]
+```
+
+Run: `lake env lean --run Scripts/GenerateTheoremIndex.lean`
+
+### What it does
+
+Two-tier discovery:
+1. **@[theorems]** annotations — explicit links from functions to their theorems
+2. **Auto-detection** — walks every ProvenTheorem/DerivedConjecture/TestedConjecture/ManifestAxiom statement, finds which project functions are mentioned
+
+The output flags each link by source: annotated, auto-detected, or both.
+
+### Single-function lookup
+
+```lean
+import DeanLean.IndexGen
+import MyProject
+
+def main (args : List String) : IO Unit := do
+  let env ← Lean.importModules #[{ module := `MyProject }] {} 0
+  let result := DeanLean.IndexGen.lookupFunction env "MyProject" args.head!.toName
+  IO.print result
+```
+
+### Recommended workflow for projects
+
+1. Add a `Scripts/GenerateTheoremIndex.lean` that calls `DeanLean.IndexGen.run`
+2. Run it as part of your verification script (or CI)
+3. Use `@[theorems]` for load-bearing explicit links
+4. Let auto-detection cover the rest — sparse annotations are better than dense

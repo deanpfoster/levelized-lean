@@ -158,5 +158,17 @@ Other macros:
 - `VerifyAxiom foo : T` — CI-only: confirms fast-mode axiom matches real proof
 - `ExternalTheorem foo := @Lib.name : T` — wraps existing library theorem
 - `Vocabulary foo := @Lib.name` — define-or-verify for Defs files
+- `Restate foo` — forward a manifest claim into current namespace, auto-detects evidence level
+- `RestateTheorem foo` — forward specifically as ProvenTheorem
+- `PureExcept Ns.fn` — static call-graph analysis proving IO surface is complete
+- `AxiomsAllowed Ns.fn` — verify axiom surface (no unexpected axioms in reachable constants)
+- `ManifestAxiom foo : T` — permanent environmental assumption (never provable)
+- `FullyAttested foo` — compile-time check that all sorry deps are ManifestAxioms
+- `Test foo` — inline test macro, tries elaboration, records pass/fail
+- `FailingConjecture foo : T` — like TestedConjecture but expects some tests to fail
 
 Fast mode: `set_option levelized.fast true` makes ProvenTheorem emit axioms.
+
+## Downstream Dependents
+
+- **l3m** (~/l3m.kiro) — verified coding agent. Depends on this repo via `require dean_lean from git`.

@@ -1,4 +1,5 @@
 import DeanLean.Basic
+import DeanLean.IndexGen
 import DeanLean.Cpp.Pair
 import DeanLean.Cpp.Optional
 import DeanLean.Cpp.Variant

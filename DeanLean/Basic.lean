@@ -112,6 +112,22 @@ elab "registerTestResults " n:ident " passed " p:num " total " t:num : command =
   modifyEnv fun env => testResultsExt.addEntry env (fullName,
     { passed, total })
 
+-- ════════════════════════════════════════════════════════════
+-- § Helper: attach optional docstring to a theorem
+-- ════════════════════════════════════════════════════════════
+
+/-- If `doc?` is `some`, attach it as the docstring of `name` (in the
+    current namespace). Used by the conjecture-style macros below so
+    that doc-comments between successive declarations don't get gobbled
+    by the term parser. -/
+private def attachOptDoc (doc? : Option (Lean.TSyntax `Lean.Parser.Command.docComment))
+    (name : Lean.Name) : Lean.Elab.Command.CommandElabM Unit := do
+  if let some doc := doc? then
+    let ns ← Lean.getCurrNamespace
+    let fullName := ns ++ name
+    let docText ← Lean.getDocStringText doc
+    Lean.addDocString fullName docText
+
 open Lean Elab Command in
 elab "Signature " n:ident " : " t:term : command => do
   let name := n.getId
@@ -147,7 +163,7 @@ elab "PartialSignature " n:ident " : " t:term : command => do
   elabCommand (← `(section variable (_sig_check : $t := $(n)) end))
 
 open Lean Elab Command in
-elab "ProvenTheorem " n:ident " : " t:term : command => do
+elab doc?:(docComment)? "ProvenTheorem " n:ident " : " t:term : command => do
   let name := n.getId
   let ns ← getCurrNamespace
   let env ← getEnv
@@ -164,10 +180,12 @@ elab "ProvenTheorem " n:ident " : " t:term : command => do
     elabCommand (← `(
       set_option linter.unusedVariables false in
       noncomputable example : $t := $n))
+    attachOptDoc doc? n.getId
     return
   let fast := levelized.fast.get (← getOptions)
   if fast then
     elabCommand (← `(@[manifest_entry] axiom $n : $t))
+    attachOptDoc doc? n.getId
   else
     let proofName := name.appendAfter "_proof"
     let derivationName := name.appendAfter "_derivation"
@@ -178,6 +196,7 @@ elab "ProvenTheorem " n:ident " : " t:term : command => do
     if hasProof then
       let rid := Lean.mkIdent proofName
       elabCommand (← `(@[manifest_entry] theorem $n : $t := $rid))
+      attachOptDoc doc? n.getId
       -- Transitive sorry check (3 levels deep)
       let env ← getEnv
       let fullName := ns ++ name
@@ -196,6 +215,7 @@ elab "ProvenTheorem " n:ident " : " t:term : command => do
     else if hasDeriv then
       let rid := Lean.mkIdent derivationName
       elabCommand (← `(@[manifest_entry] theorem $n : $t := $rid))
+      attachOptDoc doc? n.getId
       let env ← getEnv
       let fullName := ns ++ name
       if let some info := env.find? fullName then
@@ -235,7 +255,7 @@ private def checkRedundant (n : Lean.TSyntax `ident) (t : Lean.TSyntax `term) :
 
 -- TestedConjecture: requires foo_test OR passing Test results. Warns if vacuous.
 open Lean Elab Command in
-elab "TestedConjecture " n:ident " : " t:term : command => do
+elab doc?:(docComment)? "TestedConjecture " n:ident " : " t:term : command => do
   let name := n.getId
   let ns ← getCurrNamespace
   let fullName := ns ++ name
@@ -282,10 +302,11 @@ elab "TestedConjecture " n:ident " : " t:term : command => do
     | none => pure ()
   -- Create theorem
   elabCommand (← `(@[manifest_entry] theorem $n : $t := by sorry))
+  attachOptDoc doc? n.getId
 
 -- FailingConjecture: requires tests, at least one failing.
 open Lean Elab Command in
-elab "FailingConjecture " n:ident " : " t:term : command => do
+elab doc?:(docComment)? "FailingConjecture " n:ident " : " t:term : command => do
   let name := n.getId
   let ns ← getCurrNamespace
   let fullName := ns ++ name
@@ -302,6 +323,7 @@ elab "FailingConjecture " n:ident " : " t:term : command => do
   -- Now handle redundancy or create theorem
   if (← checkRedundant n t) then return
   elabCommand (← `(@[manifest_entry] theorem $n : $t := by sorry))
+  attachOptDoc doc? n.getId
 
 /-- Check whether an Expr is `True` after unfolding all `forall` binders.
     True if the type is trivially inhabited (`True`, `∀ x, True`, etc.). -/
@@ -360,13 +382,14 @@ private def warnIfTypeAlreadyProven (n : Lean.TSyntax `ident) (t : Lean.TSyntax 
       Consider deleting this UnprovenConjecture and using the existing theorem(s) directly."
 
 open Lean Elab Command in
-elab "UnprovenConjecture " n:ident " : " t:term : command => do
+elab doc?:(docComment)? "UnprovenConjecture " n:ident " : " t:term : command => do
   if (← checkRedundant n t) then return
   -- Detect duplicates: if some existing theorem has the same type and
   -- doesn't use sorry, warn that this UnprovenConjecture is redundant.
   let env ← getEnv
   warnIfTypeAlreadyProven n t env
   elabCommand (← `(@[manifest_entry] theorem $n : $t := by sorry))
+  attachOptDoc doc? n.getId
 
 -- ManifestAxiom: a permanent environmental assumption we explicitly accept.
 -- Identical to UnprovenConjecture in proof terms (reduces to sorry), but
@@ -374,9 +397,10 @@ elab "UnprovenConjecture " n:ident " : " t:term : command => do
 -- ManifestAxiom in a trust report = fully attested (as proven as possible).
 -- UnprovenConjecture in a trust report = partial (has TODOs to close).
 open Lean Elab Command in
-elab "ManifestAxiom " n:ident " : " t:term : command => do
+elab doc?:(docComment)? "ManifestAxiom " n:ident " : " t:term : command => do
   if (← checkRedundant n t) then return
   elabCommand (← `(@[manifest_entry] theorem $n : $t := by sorry))
+  attachOptDoc doc? n.getId
   let ns ← getCurrNamespace
   let fullName := ns ++ n.getId
   modifyEnv fun env => manifestAxiomAttr.ext.addEntry env fullName
@@ -394,7 +418,7 @@ private def findSorryDeps (env : Lean.Environment) (info : Lean.ConstantInfo) : 
   return result
 
 open Lean Elab Command in
-elab "DerivedConjecture " n:ident " : " t:term : command => do
+elab doc?:(docComment)? "DerivedConjecture " n:ident " : " t:term : command => do
   if (← checkRedundant n t) then return
   let name := n.getId
   let ns ← getCurrNamespace
@@ -460,12 +484,13 @@ elab "DerivedConjecture " n:ident " : " t:term : command => do
         logWarning m!"DerivedConjecture {name}: passing {results.passed}/{results.total} tests\n  blame:\n{"\n".intercalate blame.toList}"
   | none => pure ()
   elabCommand (← `(@[manifest_entry] theorem $n : $t := by sorry))
+  attachOptDoc doc? n.getId
 
 -- DecomposedConjecture: broken into pieces, ALL pieces must be at least tested.
 -- Strictly stronger than TestedConjecture, weaker than DerivedConjecture.
 -- The derivation is a real proof; the pieces are lemmas that may be sorry but must have _test.
 open Lean Elab Command in
-elab "DecomposedConjecture " n:ident " : " t:term : command => do
+elab doc?:(docComment)? "DecomposedConjecture " n:ident " : " t:term : command => do
   if (← checkRedundant n t) then return
   let name := n.getId
   let ns ← getCurrNamespace
@@ -532,6 +557,7 @@ elab "DecomposedConjecture " n:ident " : " t:term : command => do
         logWarning m!"DecomposedConjecture {name}: passing {results.passed}/{results.total} tests\n  blame:\n{"\n".intercalate blame.toList}"
   | none => pure ()
   elabCommand (← `(@[manifest_entry] theorem $n : $t := by sorry))
+  attachOptDoc doc? n.getId
 
 macro "FastHeader " n:ident " : " t:term : command =>
   `(@[manifest_entry] axiom $n : $t)

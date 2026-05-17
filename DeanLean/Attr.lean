@@ -71,3 +71,65 @@ initialize theoremsExtension : ParametricAttribute (Array Name) ←
 /-- Get the theorem names associated with a function via `@[theorems ...]`, if any. -/
 def getTheorems? (env : Environment) (n : Name) : Option (Array Name) :=
   theoremsExtension.getParam? env n
+
+/-! # Work-plan metadata for UnprovenConjecture
+
+  Three optional attributes that decorate `UnprovenConjecture` entries
+  with information useful while the work is in progress:
+
+    `@[depends_on  foo, bar, baz]`    — names of conjectures this depends on
+    `@[estimated_minutes 60]`         — rough effort estimate
+    `@[entry_point]`                  — yes-no flag: independently approachable
+
+  These attribute decls are stripped on promotion to TestedConjecture /
+  ProvenTheorem (work is done; metadata becomes noise).
+
+  Used by Scripts/workplan.lean (in user libraries) to enumerate
+  ready-to-start work for an agent picking up tasks.
+
+  Used by the macros' promotion gate: a TestedConjecture or
+  ProvenTheorem cannot reference an UnprovenConjecture in its
+  `depends_on` list (would fail to type-check the promotion).
+-/
+
+/-- `@[depends_on x, y, z]` — declare manifest dependencies. -/
+syntax (name := dependsOnAttr) "depends_on" (ident,*) : attr
+
+initialize dependsOnExtension : ParametricAttribute (Array Name) ←
+  registerParametricAttribute {
+    name := `dependsOnAttr
+    descr := "names of UnprovenConjecture entries this work depends on"
+    getParam := fun _name stx => match stx with
+      | `(attr| depends_on $deps,*) => return deps.getElems.map (·.getId)
+      | _ => Lean.throwError "invalid depends_on attribute"
+  }
+
+/-- Get the manifest dependencies of `n`, if any. -/
+def getDependsOn? (env : Environment) (n : Name) : Option (Array Name) :=
+  dependsOnExtension.getParam? env n
+
+/-- `@[estimated_minutes 60]` — rough effort estimate. -/
+syntax (name := estimatedMinutesAttr) "estimated_minutes" num : attr
+
+initialize estimatedMinutesExtension : ParametricAttribute Nat ←
+  registerParametricAttribute {
+    name := `estimatedMinutesAttr
+    descr := "rough work estimate in minutes"
+    getParam := fun _name stx => match stx with
+      | `(attr| estimated_minutes $n) => return n.getNat
+      | _ => Lean.throwError "invalid estimated_minutes attribute"
+  }
+
+/-- Get the time estimate for `n`, if any. -/
+def getEstimatedMinutes? (env : Environment) (n : Name) : Option Nat :=
+  estimatedMinutesExtension.getParam? env n
+
+/-- `@[entry_point]` — flag that this conjecture is independently
+    approachable (no unmet dependencies, good for a fresh agent). -/
+initialize entryPointAttr : TagAttribute ←
+  registerTagAttribute `entry_point
+    "marks an UnprovenConjecture as independently approachable"
+
+/-- True iff `n` is tagged with `@[entry_point]`. -/
+def isEntryPoint (env : Environment) (n : Name) : Bool :=
+  entryPointAttr.hasTag env n

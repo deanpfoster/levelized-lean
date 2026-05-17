@@ -13,6 +13,13 @@ claims. Read these conventions before making changes.
 
 <!-- BEGIN: lean-manifests-specific -->
 
+## Required reading
+
+Before writing or reviewing manifests, read
+**`templates/MANIFEST_GUIDE.md`** in the lean-manifests repo. It covers
+the shape of a good manifest, the `registerTestResults` pattern,
+anti-patterns to avoid, and promotion discipline.
+
 ## Evidence hierarchy
 
 Every claim has an explicit evidence level:

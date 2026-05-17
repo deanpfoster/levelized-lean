@@ -68,6 +68,8 @@ See `templates/README.md` for details.
   lean-manifests itself (not for downstream users — see
   `templates/` for that)
 - **`templates/`** — starter agent configs for downstream projects
+- **`templates/MANIFEST_GUIDE.md`** — how to write a good manifest
+  (patterns, anti-patterns, promotion discipline)
 - **`CONVERSION_GUIDE.md`** — guide for converting existing Lean code
   to use the manifest discipline
 - **`CPP_PROJECT.md`** — an example: formalizing the C++ standard

@@ -178,6 +178,18 @@ Fast mode: `set_option levelized.fast true` makes ProvenTheorem emit axioms.
 
 - **l3m** (~/l3m.kiro) — verified coding agent. Depends on this repo via `require dean_lean from git`.
 
+## Writing good manifests
+
+Read **`templates/MANIFEST_GUIDE.md`** before writing or reviewing any
+manifest. Key principles:
+
+- 4–6 headline claims written for the consumer, not proof obligations
+- Explicit "What we do NOT claim" section
+- `registerTestResults` on every conjecture with test coverage
+- No vacuous totality (`∀ x, ∃ y, f x = y` is a tautology)
+- No trivially decidable claims left as UnprovenConjecture
+- Strip workplan metadata on promotion
+
 ## The Workflow Gap and @[theorems]
 
 ### The problem
